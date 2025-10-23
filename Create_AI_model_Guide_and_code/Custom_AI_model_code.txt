@@ -1,0 +1,247 @@
+# ============================================================================
+# FILE 1: requirements.txt
+# ============================================================================
+"""
+torch>=2.1.0
+transformers>=4.36.0
+datasets>=2.14.0
+accelerate>=0.25.0
+peft>=0.7.0
+bitsandbytes>=0.41.0
+sentencepiece>=0.1.99
+protobuf>=3.20.0
+scipy>=1.11.0
+scikit-learn>=1.3.0
+tqdm>=4.66.0
+tensorboard>=2.15.0
+wandb>=0.16.0
+yt-dlp>=2023.11.0
+youtube-transcript-api>=0.6.1
+pytube>=15.0.0
+openai-whisper>=20231117
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+pandas>=2.1.0
+numpy>=1.24.0
+"""
+
+# Save the above as requirements.txt
+
+# ============================================================================
+# FILE 2: setup_environment.sh
+# ============================================================================
+"""
+#!/bin/bash
+
+# Setup script for dual GPU training environment
+
+echo "Setting up training environment..."
+
+# Create virtual environment
+python -m venv vtuber_env
+source vtuber_env/bin/activate
+
+# Upgrade pip
+pip install --upgrade pip
+
+# Install PyTorch with CUDA support
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+# Install other requirements
+pip install -r requirements.txt
+
+# Install llama.cpp for GGUF conversion
+git clone https://github.com/ggerganov/llama.cpp
+cd llama.cpp
+make
+cd ..
+
+# Create necessary directories
+mkdir -p data/raw
+mkdir -p data/processed
+mkdir -p models/checkpoints
+mkdir -p models/final
+mkdir -p logs
+
+echo "Environment setup complete!"
+echo "Activate with: source vtuber_env/bin/activate"
+"""
+
+# Save the above as setup_environment.sh
+
+# ============================================================================
+# FILE 3: 1_scrape_youtube.py
+# ============================================================================
+
+import os
+import json
+import time
+from youtube_transcript_api import YouTubeTranscriptApi
+from pytube import Channel, Playlist
+import yt_dlp
+import subprocess
+from pathlib import Path
+from tqdm import tqdm
+
+class YouTubeScraper:
+    def __init__(self, output_dir="data/raw"):
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+    def get_channel_videos(self, channel_url):
+        """Get all video IDs from a channel"""
+        print(f"Fetching videos from: {channel_url}")
+        try:
+            c = Channel(channel_url)
+            video_ids = [video.video_id for video in c.videos]
+            print(f"Found {len(video_ids)} videos")
+            return video_ids
+        except Exception as e:
+            print(f"Error fetching channel: {e}")
+            return []
+    
+    def get_playlist_videos(self, playlist_url):
+        """Get all video IDs from a playlist"""
+        print(f"Fetching videos from playlist: {playlist_url}")
+        try:
+            p = Playlist(playlist_url)
+            video_ids = [url.split('v=')[1] for url in p.video_urls]
+            print(f"Found {len(video_ids)} videos")
+            return video_ids
+        except Exception as e:
+            print(f"Error fetching playlist: {e}")
+            return []
+    
+    def scrape_existing_captions(self, video_ids):
+        """Scrape existing captions from videos"""
+        transcripts = []
+        
+        for video_id in tqdm(video_ids, desc="Scraping captions"):
+            try:
+                transcript = YouTubeTranscriptApi.get_transcript(video_id)
+                text = ' '.join([entry['text'] for entry in transcript])
+                
+                transcripts.append({
+                    'video_id': video_id,
+                    'text': text,
+                    'source': 'youtube_captions',
+                    'url': f'https://youtube.com/watch?v={video_id}'
+                })
+                
+                time.sleep(0.5)  # Rate limiting
+            except Exception as e:
+                print(f"\nError with {video_id}: {e}")
+                continue
+        
+        return transcripts
+    
+    def download_and_transcribe(self, video_ids, whisper_model="medium"):
+        """Download audio and transcribe with Whisper"""
+        transcripts = []
+        audio_dir = self.output_dir / "audio_temp"
+        audio_dir.mkdir(exist_ok=True)
+        
+        for video_id in tqdm(video_ids, desc="Downloading & transcribing"):
+            try:
+                video_url = f'https://youtube.com/watch?v={video_id}'
+                audio_file = audio_dir / f"{video_id}.mp3"
+                
+                # Download audio
+                ydl_opts = {
+                    'format': 'bestaudio/best',
+                    'postprocessors': [{
+                        'key': 'FFmpegExtractAudio',
+                        'preferredcodec': 'mp3',
+                        'preferredquality': '192',
+                    }],
+                    'outtmpl': str(audio_file.with_suffix('')),
+                    'quiet': True
+                }
+                
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([video_url])
+                
+                # Transcribe with Whisper
+                result = subprocess.run([
+                    'whisper',
+                    str(audio_file),
+                    '--model', whisper_model,
+                    '--output_format', 'txt',
+                    '--output_dir', str(audio_dir)
+                ], capture_output=True, text=True)
+                
+                # Read transcript
+                txt_file = audio_file.with_suffix('.txt')
+                if txt_file.exists():
+                    with open(txt_file, 'r', encoding='utf-8') as f:
+                        text = f.read()
+                    
+                    transcripts.append({
+                        'video_id': video_id,
+                        'text': text,
+                        'source': 'whisper_transcription',
+                        'url': video_url
+                    })
+                    
+                    # Clean up
+                    audio_file.unlink(missing_ok=True)
+                    txt_file.unlink(missing_ok=True)
+                
+                time.sleep(1)  # Rate limiting
+                
+            except Exception as e:
+                print(f"\nError processing {video_id}: {e}")
+                continue
+        
+        return transcripts
+    
+    def save_transcripts(self, transcripts, filename="youtube_transcripts.jsonl"):
+        """Save transcripts to JSONL file"""
+        output_file = self.output_dir / filename
+        
+        with open(output_file, 'w', encoding='utf-8') as f:
+            for transcript in transcripts:
+                f.write(json.dumps(transcript, ensure_ascii=False) + '\n')
+        
+        print(f"Saved {len(transcripts)} transcripts to {output_file}")
+
+# Example usage
+if __name__ == "__main__":
+    scraper = YouTubeScraper()
+    
+    # Add your VTuber channels and playlists here
+    channels = [
+        # "https://www.youtube.com/@ChannelName",
+    ]
+    
+    playlists = [
+        # "https://www.youtube.com/playlist?list=PLAYLIST_ID",
+    ]
+    
+    all_video_ids = []
+    
+    for channel in channels:
+        all_video_ids.extend(scraper.get_channel_videos(channel))
+    
+    for playlist in playlists:
+        all_video_ids.extend(scraper.get_playlist_videos(playlist))
+    
+    # Remove duplicates
+    all_video_ids = list(set(all_video_ids))
+    
+    print(f"\nTotal unique videos: {len(all_video_ids)}")
+    
+    # Try captions first (faster)
+    print("\n=== Attempting to scrape existing captions ===")
+    transcripts = scraper.scrape_existing_captions(all_video_ids)
+    
+    # For videos without captions, transcribe with Whisper
+    transcribed_ids = {t['video_id'] for t in transcripts}
+    remaining_ids = [vid for vid in all_video_ids if vid not in transcribed_ids]
+    
+    if remaining_ids:
+        print(f"\n=== Transcribing {len(remaining_ids)} videos without captions ===")
+        whisper_transcripts = scraper.download_and_transcribe(remaining_ids)
+        transcripts.extend(whisper_transcripts)
+    
+    scraper.save_transcripts(transcripts)

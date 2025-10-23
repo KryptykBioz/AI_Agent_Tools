@@ -1,0 +1,1274 @@
+trainer.train()
+
+# ============================================================================
+# FILE 7: 5_test_model.py
+# ============================================================================
+
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import PeftModel
+from pathlib import Path
+import json
+
+class ModelTester:
+    def __init__(self, model_path="models/final"):
+        self.model_path = Path(model_path)
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        
+        print(f"Loading model from {model_path}...")
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            model_path,
+            trust_remote_code=True
+        )
+        
+        # Load model with LoRA weights
+        self.model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            device_map="auto",
+            torch_dtype=torch.float16,
+            trust_remote_code=True
+        )
+        
+        self.model.eval()
+        print("Model loaded successfully!")
+    
+    def generate(self, prompt, max_length=200, temperature=0.8, top_p=0.9, top_k=50):
+        """Generate text from prompt"""
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        
+        with torch.no_grad():
+            outputs = self.model.generate(
+                **inputs,
+                max_length=max_length,
+                temperature=temperature,
+                top_p=top_p,
+                top_k=top_k,
+                do_sample=True,
+                pad_token_id=self.tokenizer.pad_token_id,
+                eos_token_id=self.tokenizer.eos_token_id,
+                repetition_penalty=1.15
+            )
+        
+        generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        return generated_text
+    
+    def interactive_test(self):
+        """Interactive testing mode"""
+        print("\n" + "="*50)
+        print("Interactive Model Testing")
+        print("="*50)
+        print("Type 'quit' to exit\n")
+        
+        while True:
+            prompt = input("Prompt: ")
+            
+            if prompt.lower() == 'quit':
+                break
+            
+            print("\nGenerating...\n")
+            response = self.generate(prompt)
+            print(f"Response: {response}\n")
+            print("-"*50 + "\n")
+    
+    def run_test_suite(self):
+        """Run predefined tests"""
+        test_prompts = [
+            "Hey chat, what game should we play today?",
+            "Let's play this game! First, I need to",
+            "Chat, what do you think about",
+            "To defeat this boss, you should",
+            "Welcome back to the stream everyone!",
+            "This level is so hard! I think the strategy is to",
+            "Let me explain how this mechanic works:",
+            "That was such a close call! Did you see when",
+        ]
+        
+        print("\n" + "="*50)
+        print("Running Test Suite")
+        print("="*50 + "\n")
+        
+        results = []
+        
+        for i, prompt in enumerate(test_prompts, 1):
+            print(f"Test {i}/{len(test_prompts)}")
+            print(f"Prompt: {prompt}")
+            response = self.generate(prompt, max_length=150)
+            print(f"Response: {response}\n")
+            print("-"*50 + "\n")
+            
+            results.append({
+                'prompt': prompt,
+                'response': response
+            })
+        
+        # Save results
+        with open('test_results.json', 'w', encoding='utf-8') as f:
+            json.dump(results, f, indent=2, ensure_ascii=False)
+        
+        print("Test results saved to test_results.json")
+
+if __name__ == "__main__":
+    tester = ModelTester()
+    
+    # Run test suite
+    tester.run_test_suite()
+    
+    # Interactive mode
+    tester.interactive_test()
+
+# ============================================================================
+# FILE 8: 6_convert_to_gguf.py
+# ============================================================================
+
+import subprocess
+import shutil
+from pathlib import Path
+import sys
+
+class GGUFConverter:
+    def __init__(
+        self,
+        model_path="models/final",
+        output_dir="models/gguf",
+        llama_cpp_path="llama.cpp"
+    ):
+        self.model_path = Path(model_path)
+        self.output_dir = Path(output_dir)
+        self.llama_cpp_path = Path(llama_cpp_path)
+        
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Check if llama.cpp exists
+        if not self.llama_cpp_path.exists():
+            print(f"Error: llama.cpp not found at {self.llama_cpp_path}")
+            print("Please run: git clone https://github.com/ggerganov/llama.cpp && cd llama.cpp && make")
+            sys.exit(1)
+    
+    def convert_to_fp16(self):
+        """Convert model to FP16 GGUF"""
+        print("Converting model to FP16 GGUF format...")
+        
+        convert_script = self.llama_cpp_path / "convert.py"
+        output_file = self.output_dir / "vtuber-model-f16.gguf"
+        
+        cmd = [
+            "python",
+            str(convert_script),
+            str(self.model_path),
+            "--outtype", "f16",
+            "--outfile", str(output_file)
+        ]
+        
+        try:
+            subprocess.run(cmd, check=True)
+            print(f"FP16 model saved to: {output_file}")
+            return output_file
+        except subprocess.CalledProcessError as e:
+            print(f"Error during conversion: {e}")
+            return None
+    
+    def quantize_model(self, input_file, quant_type="q4_k_m"):
+        """Quantize GGUF model"""
+        print(f"Quantizing model to {quant_type}...")
+        
+        quantize_binary = self.llama_cpp_path / "quantize"
+        output_file = self.output_dir / f"vtuber-model-{quant_type}.gguf"
+        
+        cmd = [
+            str(quantize_binary),
+            str(input_file),
+            str(output_file),
+            quant_type
+        ]
+        
+        try:
+            subprocess.run(cmd, check=True)
+            print(f"Quantized model saved to: {output_file}")
+            return output_file
+        except subprocess.CalledProcessError as e:
+            print(f"Error during quantization: {e}")
+            return None
+    
+    def convert_and_quantize(self):
+        """Full conversion pipeline"""
+        print("\n" + "="*50)
+        print("Converting Model to GGUF Format")
+        print("="*50 + "\n")
+        
+        # Convert to FP16
+        fp16_file = self.convert_to_fp16()
+        
+        if not fp16_file:
+            print("Conversion failed!")
+            return
+        
+        print("\n" + "-"*50 + "\n")
+        
+        # Quantize to different formats
+        quant_types = [
+            "q4_0",    # Smallest, fastest
+            "q4_k_m",  # Good balance (recommended)
+            "q5_k_m",  # Higher quality
+            "q8_0"     # Highest quality
+        ]
+        
+        quantized_files = []
+        
+        for quant_type in quant_types:
+            print()
+            quant_file = self.quantize_model(fp16_file, quant_type)
+            if quant_file:
+                quantized_files.append(quant_file)
+                # Print file size
+                size_mb = quant_file.stat().st_size / (1024 * 1024)
+                print(f"  Size: {size_mb:.1f} MB")
+            print()
+        
+        print("="*50)
+        print(f"Conversion complete! Models saved to: {self.output_dir}")
+        print("\nAvailable models:")
+        for f in quantized_files:
+            size_mb = f.stat().st_size / (1024 * 1024)
+            print(f"  - {f.name} ({size_mb:.1f} MB)")
+
+if __name__ == "__main__":
+    converter = GGUFConverter()
+    converter.convert_and_quantize()
+
+# ============================================================================
+# FILE 9: 7_create_ollama_model.py
+# ============================================================================
+
+import subprocess
+from pathlib import Path
+import sys
+
+class OllamaModelCreator:
+    def __init__(self, gguf_path="models/gguf/vtuber-model-q4_k_m.gguf"):
+        self.gguf_path = Path(gguf_path)
+        
+        if not self.gguf_path.exists():
+            print(f"Error: GGUF model not found at {self.gguf_path}")
+            sys.exit(1)
+        
+        # Check if Ollama is installed
+        try:
+            subprocess.run(["ollama", "--version"], capture_output=True, check=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            print("Error: Ollama is not installed or not in PATH")
+            print("Install from: https://ollama.ai")
+            sys.exit(1)
+    
+    def create_modelfile(self, output_path="Modelfile"):
+        """Create Ollama Modelfile"""
+        modelfile_content = f"""# VTuber AI Model
+FROM {self.gguf_path.absolute()}
+
+# Model parameters
+PARAMETER temperature 0.8
+PARAMETER top_p 0.9
+PARAMETER top_k 40
+PARAMETER repeat_penalty 1.15
+PARAMETER num_ctx 2048
+
+# System prompt
+SYSTEM \"\"\"You are an enthusiastic VTuber and gaming streamer with deep knowledge of video games. You engage with your audience naturally, using casual language and gaming terminology. You're energetic, friendly, and love sharing gaming tips and strategies. You often reference game mechanics, community memes, and streaming culture.\"\"\"
+
+# Template for chat format
+TEMPLATE \"\"\"{{ if .System }}<|system|>
+{{ .System }}<|end|>
+{{ end }}{{ if .Prompt }}<|user|>
+{{ .Prompt }}<|end|>
+{{ end }}<|assistant|>
+{{ .Response }}<|end|>
+\"\"\"
+"""
+        
+        with open(output_path, 'w') as f:
+            f.write(modelfile_content)
+        
+        print(f"Modelfile created: {output_path}")
+        return output_path
+    
+    def create_ollama_model(self, model_name="vtuber-model"):
+        """Create Ollama model"""
+        print(f"\nCreating Ollama model '{model_name}'...")
+        
+        # Create Modelfile
+        modelfile = self.create_modelfile()
+        
+        # Create model in Ollama
+        cmd = ["ollama", "create", model_name, "-f", modelfile]
+        
+        try:
+            subprocess.run(cmd, check=True)
+            print(f"\n✓ Model '{model_name}' created successfully!")
+            print(f"\nTest it with: ollama run {model_name}")
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"Error creating Ollama model: {e}")
+            return False
+
+if __name__ == "__main__":
+    creator = OllamaModelCreator()
+    creator.create_ollama_model()
+
+# ============================================================================
+# FILE 10: 8_ollama_integration.py
+# ============================================================================
+
+import ollama
+import json
+from pathlib import Path
+
+class OllamaVTuberInterface:
+    def __init__(self, model_name="vtuber-model"):
+        self.model_name = model_name
+        self.conversation_history = []
+        self.max_history = 10  # Keep last 10 exchanges
+    
+    def generate_response(self, user_input, include_history=True):
+        """Generate response using Ollama"""
+        messages = []
+        
+        if include_history:
+            messages.extend(self.conversation_history)
+        
+        messages.append({
+            'role': 'user',
+            'content': user_input
+        })
+        
+        try:
+            response = ollama.chat(
+                model=self.model_name,
+                messages=messages,
+                options={
+                    'temperature': 0.8,
+                    'top_p': 0.9,
+                    'top_k': 40,
+                    'repeat_penalty': 1.15
+                }
+            )
+            
+            assistant_message = response['message']['content']
+            
+            # Update conversation history
+            self.conversation_history.append({
+                'role': 'user',
+                'content': user_input
+            })
+            self.conversation_history.append({
+                'role': 'assistant',
+                'content': assistant_message
+            })
+            
+            # Trim history if too long
+            if len(self.conversation_history) > self.max_history * 2:
+                self.conversation_history = self.conversation_history[-self.max_history * 2:]
+            
+            return assistant_message
+            
+        except Exception as e:
+            return f"Error: {e}"
+    
+    def stream_response(self, user_input):
+        """Stream response token by token"""
+        messages = self.conversation_history + [{
+            'role': 'user',
+            'content': user_input
+        }]
+        
+        full_response = ""
+        
+        try:
+            stream = ollama.chat(
+                model=self.model_name,
+                messages=messages,
+                stream=True,
+                options={
+                    'temperature': 0.8,
+                    'top_p': 0.9,
+                }
+            )
+            
+            for chunk in stream:
+                content = chunk['message']['content']
+                full_response += content
+                yield content
+            
+            # Update history
+            self.conversation_history.append({
+                'role': 'user',
+                'content': user_input
+            })
+            self.conversation_history.append({
+                'role': 'assistant',
+                'content': full_response
+            })
+            
+            if len(self.conversation_history) > self.max_history * 2:
+                self.conversation_history = self.conversation_history[-self.max_history * 2:]
+                
+        except Exception as e:
+            yield f"Error: {e}"
+    
+    def clear_history(self):
+        """Clear conversation history"""
+        self.conversation_history = []
+    
+    def save_conversation(self, filename="conversation.json"):
+        """Save conversation to file"""
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(self.conversation_history, f, indent=2, ensure_ascii=False)
+        print(f"Conversation saved to {filename}")
+    
+    def interactive_chat(self):
+        """Interactive chat mode"""
+        print("\n" + "="*60)
+        print("VTuber AI Interactive Chat")
+        print("="*60)
+        print("Commands:")
+        print("  'quit' - Exit")
+        print("  'clear' - Clear conversation history")
+        print("  'save' - Save conversation")
+        print("  'stream' - Toggle streaming mode")
+        print("="*60 + "\n")
+        
+        streaming = False
+        
+        while True:
+            user_input = input("You: ")
+            
+            if user_input.lower() == 'quit':
+                break
+            elif user_input.lower() == 'clear':
+                self.clear_history()
+                print("Conversation history cleared.\n")
+                continue
+            elif user_input.lower() == 'save':
+                self.save_conversation()
+                continue
+            elif user_input.lower() == 'stream':
+                streaming = not streaming
+                print(f"Streaming mode: {'ON' if streaming else 'OFF'}\n")
+                continue
+            
+            print("\nVTuber: ", end="", flush=True)
+            
+            if streaming:
+                for token in self.stream_response(user_input):
+                    print(token, end="", flush=True)
+                print("\n")
+            else:
+                response = self.generate_response(user_input)
+                print(f"{response}\n")
+
+if __name__ == "__main__":
+    interface = OllamaVTuberInterface()
+    interface.interactive_chat()# ============================================================================
+# FILE 1: requirements.txt
+# ============================================================================
+"""
+torch>=2.1.0
+transformers>=4.36.0
+datasets>=2.14.0
+accelerate>=0.25.0
+peft>=0.7.0
+bitsandbytes>=0.41.0
+sentencepiece>=0.1.99
+protobuf>=3.20.0
+scipy>=1.11.0
+scikit-learn>=1.3.0
+tqdm>=4.66.0
+tensorboard>=2.15.0
+wandb>=0.16.0
+yt-dlp>=2023.11.0
+youtube-transcript-api>=0.6.1
+pytube>=15.0.0
+openai-whisper>=20231117
+beautifulsoup4>=4.12.0
+requests>=2.31.0
+pandas>=2.1.0
+numpy>=1.24.0
+"""
+
+# Save the above as requirements.txt
+
+# ============================================================================
+# FILE 2: setup_environment.sh
+# ============================================================================
+"""
+#!/bin/bash
+
+# Setup script for dual GPU training environment
+
+echo "Setting up training environment..."
+
+# Create virtual environment
+python -m venv vtuber_env
+source vtuber_env/bin/activate
+
+# Upgrade pip
+pip install --upgrade pip
+
+# Install PyTorch with CUDA support
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+# Install other requirements
+pip install -r requirements.txt
+
+# Install llama.cpp for GGUF conversion
+git clone https://github.com/ggerganov/llama.cpp
+cd llama.cpp
+make
+cd ..
+
+# Create necessary directories
+mkdir -p data/raw
+mkdir -p data/processed
+mkdir -p models/checkpoints
+mkdir -p models/final
+mkdir -p logs
+
+echo "Environment setup complete!"
+echo "Activate with: source vtuber_env/bin/activate"
+"""
+
+# Save the above as setup_environment.sh
+
+# ============================================================================
+# FILE 3: 1_scrape_youtube.py
+# ============================================================================
+
+import os
+import json
+import time
+from youtube_transcript_api import YouTubeTranscriptApi
+from pytube import Channel, Playlist
+import yt_dlp
+import subprocess
+from pathlib import Path
+from tqdm import tqdm
+
+class YouTubeScraper:
+    def __init__(self, output_dir="data/raw"):
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+    def get_channel_videos(self, channel_url):
+        """Get all video IDs from a channel"""
+        print(f"Fetching videos from: {channel_url}")
+        try:
+            c = Channel(channel_url)
+            video_ids = [video.video_id for video in c.videos]
+            print(f"Found {len(video_ids)} videos")
+            return video_ids
+        except Exception as e:
+            print(f"Error fetching channel: {e}")
+            return []
+    
+    def get_playlist_videos(self, playlist_url):
+        """Get all video IDs from a playlist"""
+        print(f"Fetching videos from playlist: {playlist_url}")
+        try:
+            p = Playlist(playlist_url)
+            video_ids = [url.split('v=')[1] for url in p.video_urls]
+            print(f"Found {len(video_ids)} videos")
+            return video_ids
+        except Exception as e:
+            print(f"Error fetching playlist: {e}")
+            return []
+    
+    def scrape_existing_captions(self, video_ids):
+        """Scrape existing captions from videos"""
+        transcripts = []
+        
+        for video_id in tqdm(video_ids, desc="Scraping captions"):
+            try:
+                transcript = YouTubeTranscriptApi.get_transcript(video_id)
+                text = ' '.join([entry['text'] for entry in transcript])
+                
+                transcripts.append({
+                    'video_id': video_id,
+                    'text': text,
+                    'source': 'youtube_captions',
+                    'url': f'https://youtube.com/watch?v={video_id}'
+                })
+                
+                time.sleep(0.5)  # Rate limiting
+            except Exception as e:
+                print(f"\nError with {video_id}: {e}")
+                continue
+        
+        return transcripts
+    
+    def download_and_transcribe(self, video_ids, whisper_model="medium"):
+        """Download audio and transcribe with Whisper"""
+        transcripts = []
+        audio_dir = self.output_dir / "audio_temp"
+        audio_dir.mkdir(exist_ok=True)
+        
+        for video_id in tqdm(video_ids, desc="Downloading & transcribing"):
+            try:
+                video_url = f'https://youtube.com/watch?v={video_id}'
+                audio_file = audio_dir / f"{video_id}.mp3"
+                
+                # Download audio
+                ydl_opts = {
+                    'format': 'bestaudio/best',
+                    'postprocessors': [{
+                        'key': 'FFmpegExtractAudio',
+                        'preferredcodec': 'mp3',
+                        'preferredquality': '192',
+                    }],
+                    'outtmpl': str(audio_file.with_suffix('')),
+                    'quiet': True
+                }
+                
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    ydl.download([video_url])
+                
+                # Transcribe with Whisper
+                result = subprocess.run([
+                    'whisper',
+                    str(audio_file),
+                    '--model', whisper_model,
+                    '--output_format', 'txt',
+                    '--output_dir', str(audio_dir)
+                ], capture_output=True, text=True)
+                
+                # Read transcript
+                txt_file = audio_file.with_suffix('.txt')
+                if txt_file.exists():
+                    with open(txt_file, 'r', encoding='utf-8') as f:
+                        text = f.read()
+                    
+                    transcripts.append({
+                        'video_id': video_id,
+                        'text': text,
+                        'source': 'whisper_transcription',
+                        'url': video_url
+                    })
+                    
+                    # Clean up
+                    audio_file.unlink(missing_ok=True)
+                    txt_file.unlink(missing_ok=True)
+                
+                time.sleep(1)  # Rate limiting
+                
+            except Exception as e:
+                print(f"\nError processing {video_id}: {e}")
+                continue
+        
+        return transcripts
+    
+    def save_transcripts(self, transcripts, filename="youtube_transcripts.jsonl"):
+        """Save transcripts to JSONL file"""
+        output_file = self.output_dir / filename
+        
+        with open(output_file, 'w', encoding='utf-8') as f:
+            for transcript in transcripts:
+                f.write(json.dumps(transcript, ensure_ascii=False) + '\n')
+        
+        print(f"Saved {len(transcripts)} transcripts to {output_file}")
+
+# Example usage
+if __name__ == "__main__":
+    scraper = YouTubeScraper()
+    
+    # Add your VTuber channels and playlists here
+    channels = [
+        # "https://www.youtube.com/@ChannelName",
+    ]
+    
+    playlists = [
+        # "https://www.youtube.com/playlist?list=PLAYLIST_ID",
+    ]
+    
+    all_video_ids = []
+    
+    for channel in channels:
+        all_video_ids.extend(scraper.get_channel_videos(channel))
+    
+    for playlist in playlists:
+        all_video_ids.extend(scraper.get_playlist_videos(playlist))
+    
+    # Remove duplicates
+    all_video_ids = list(set(all_video_ids))
+    
+    print(f"\nTotal unique videos: {len(all_video_ids)}")
+    
+    # Try captions first (faster)
+    print("\n=== Attempting to scrape existing captions ===")
+    transcripts = scraper.scrape_existing_captions(all_video_ids)
+    
+    # For videos without captions, transcribe with Whisper
+    transcribed_ids = {t['video_id'] for t in transcripts}
+    remaining_ids = [vid for vid in all_video_ids if vid not in transcribed_ids]
+    
+    if remaining_ids:
+        print(f"\n=== Transcribing {len(remaining_ids)} videos without captions ===")
+        whisper_transcripts = scraper.download_and_transcribe(remaining_ids)
+        transcripts.extend(whisper_transcripts)
+    
+    scraper.save_transcripts(transcripts)
+
+# ============================================================================
+# FILE 4: 2_scrape_guides.py
+# ============================================================================
+
+import requests
+from bs4 import BeautifulSoup
+import time
+import json
+from pathlib import Path
+from tqdm import tqdm
+
+class GameGuideScraper:
+    def __init__(self, output_dir="data/raw"):
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+    
+    def scrape_wiki_page(self, url):
+        """Scrape a single wiki page"""
+        try:
+            response = requests.get(url, headers=self.headers, timeout=10)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.content, 'html.parser')
+            
+            # Try different common content selectors
+            content = None
+            selectors = [
+                'div.mw-parser-output',
+                'div.page-content',
+                'article',
+                'div.content',
+                'main'
+            ]
+            
+            for selector in selectors:
+                content = soup.select_one(selector)
+                if content:
+                    break
+            
+            if not content:
+                content = soup.find('body')
+            
+            # Remove scripts, styles, navigation
+            for tag in content.find_all(['script', 'style', 'nav', 'header', 'footer']):
+                tag.decompose()
+            
+            text = content.get_text(separator='\n', strip=True)
+            
+            # Clean up excessive newlines
+            lines = [line.strip() for line in text.split('\n') if line.strip()]
+            text = '\n'.join(lines)
+            
+            return {
+                'url': url,
+                'text': text,
+                'source': 'game_guide'
+            }
+            
+        except Exception as e:
+            print(f"Error scraping {url}: {e}")
+            return None
+    
+    def scrape_wiki_category(self, base_url, category_path, max_pages=100):
+        """Scrape multiple pages from a wiki category"""
+        guides = []
+        
+        # This is a template - adjust for your specific wiki structure
+        page_urls = self.discover_pages(base_url, category_path, max_pages)
+        
+        for url in tqdm(page_urls, desc="Scraping guides"):
+            guide = self.scrape_wiki_page(url)
+            if guide and len(guide['text']) > 500:  # Filter out short pages
+                guides.append(guide)
+            time.sleep(1)  # Rate limiting
+        
+        return guides
+    
+    def discover_pages(self, base_url, category_path, max_pages):
+        """Discover page URLs from a category or sitemap"""
+        # Implement based on your target wiki structure
+        # This is a placeholder - you'll need to customize
+        return []
+    
+    def scrape_url_list(self, urls):
+        """Scrape a list of specific URLs"""
+        guides = []
+        
+        for url in tqdm(urls, desc="Scraping guides"):
+            guide = self.scrape_wiki_page(url)
+            if guide and len(guide['text']) > 500:
+                guides.append(guide)
+            time.sleep(1)
+        
+        return guides
+    
+    def save_guides(self, guides, filename="game_guides.jsonl"):
+        """Save guides to JSONL file"""
+        output_file = self.output_dir / filename
+        
+        with open(output_file, 'w', encoding='utf-8') as f:
+            for guide in guides:
+                f.write(json.dumps(guide, ensure_ascii=False) + '\n')
+        
+        print(f"Saved {len(guides)} guides to {output_file}")
+
+# Example usage
+if __name__ == "__main__":
+    scraper = GameGuideScraper()
+    
+    # Add your game guide URLs here
+    guide_urls = [
+        # "https://gamewiki.example.com/Guide1",
+        # "https://gamewiki.example.com/Guide2",
+    ]
+    
+    if guide_urls:
+        guides = scraper.scrape_url_list(guide_urls)
+        scraper.save_guides(guides)
+    else:
+        print("Add guide URLs to scrape in the guide_urls list")
+
+# ============================================================================
+# FILE 5: 3_preprocess_data.py
+# ============================================================================
+
+import json
+import re
+import unicodedata
+from pathlib import Path
+from sklearn.model_selection import train_test_split
+from tqdm import tqdm
+import random
+
+class DataPreprocessor:
+    def __init__(self, input_dir="data/raw", output_dir="data/processed"):
+        self.input_dir = Path(input_dir)
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+    
+    def clean_text(self, text):
+        """Clean and normalize text"""
+        # Remove URLs
+        text = re.sub(r'http\S+|www\.\S+', '', text)
+        
+        # Normalize unicode
+        text = unicodedata.normalize('NFKD', text)
+        
+        # Remove excessive whitespace
+        text = re.sub(r'\s+', ' ', text)
+        text = re.sub(r'\n\s*\n', '\n\n', text)
+        
+        # Remove special characters but keep basic punctuation
+        text = re.sub(r'[^\w\s.,!?\-\'\"()\n]', '', text)
+        
+        return text.strip()
+    
+    def split_into_chunks(self, text, max_length=1024, overlap=50):
+        """Split text into overlapping chunks"""
+        # Split by sentences
+        sentences = re.split(r'(?<=[.!?])\s+', text)
+        
+        chunks = []
+        current_chunk = []
+        current_length = 0
+        
+        for sentence in sentences:
+            sentence = sentence.strip()
+            if not sentence:
+                continue
+            
+            sentence_length = len(sentence.split())
+            
+            if current_length + sentence_length > max_length:
+                if current_chunk:
+                    chunks.append(' '.join(current_chunk))
+                    # Keep last few sentences for overlap
+                    overlap_sentences = []
+                    overlap_length = 0
+                    for s in reversed(current_chunk):
+                        s_len = len(s.split())
+                        if overlap_length + s_len <= overlap:
+                            overlap_sentences.insert(0, s)
+                            overlap_length += s_len
+                        else:
+                            break
+                    current_chunk = overlap_sentences + [sentence]
+                    current_length = overlap_length + sentence_length
+                else:
+                    current_chunk = [sentence]
+                    current_length = sentence_length
+            else:
+                current_chunk.append(sentence)
+                current_length += sentence_length
+        
+        if current_chunk:
+            chunks.append(' '.join(current_chunk))
+        
+        return chunks
+    
+    def load_raw_data(self):
+        """Load all raw JSONL files"""
+        all_data = []
+        
+        for jsonl_file in self.input_dir.glob("*.jsonl"):
+            print(f"Loading {jsonl_file.name}...")
+            with open(jsonl_file, 'r', encoding='utf-8') as f:
+                for line in f:
+                    try:
+                        item = json.loads(line)
+                        all_data.append(item)
+                    except:
+                        continue
+        
+        print(f"Loaded {len(all_data)} raw items")
+        return all_data
+    
+    def process_dataset(self):
+        """Process and split dataset"""
+        raw_data = self.load_raw_data()
+        
+        processed_items = []
+        
+        print("Processing and chunking data...")
+        for item in tqdm(raw_data):
+            text = item.get('text', '')
+            
+            # Clean text
+            cleaned = self.clean_text(text)
+            
+            # Skip if too short
+            if len(cleaned.split()) < 50:
+                continue
+            
+            # Split into chunks
+            chunks = self.split_into_chunks(cleaned, max_length=1024)
+            
+            for chunk in chunks:
+                if len(chunk.split()) >= 50:  # Minimum chunk size
+                    processed_items.append({
+                        'text': chunk,
+                        'source': item.get('source', 'unknown')
+                    })
+        
+        print(f"Created {len(processed_items)} processed chunks")
+        
+        # Shuffle
+        random.shuffle(processed_items)
+        
+        # Split: 80% train, 10% validation, 10% test
+        train_data, temp_data = train_test_split(
+            processed_items, test_size=0.2, random_state=42
+        )
+        val_data, test_data = train_test_split(
+            temp_data, test_size=0.5, random_state=42
+        )
+        
+        # Save splits
+        self.save_split(train_data, "train.jsonl")
+        self.save_split(val_data, "val.jsonl")
+        self.save_split(test_data, "test.jsonl")
+        
+        print(f"\nDataset split:")
+        print(f"  Train: {len(train_data)} samples")
+        print(f"  Val: {len(val_data)} samples")
+        print(f"  Test: {len(test_data)} samples")
+        
+        # Save statistics
+        total_words = sum(len(item['text'].split()) for item in processed_items)
+        stats = {
+            'total_samples': len(processed_items),
+            'train_samples': len(train_data),
+            'val_samples': len(val_data),
+            'test_samples': len(test_data),
+            'total_words': total_words,
+            'avg_words_per_sample': total_words / len(processed_items)
+        }
+        
+        with open(self.output_dir / "stats.json", 'w') as f:
+            json.dump(stats, f, indent=2)
+        
+        print(f"\nTotal words in dataset: {total_words:,}")
+        print(f"Average words per sample: {stats['avg_words_per_sample']:.1f}")
+    
+    def save_split(self, data, filename):
+        """Save data split to file"""
+        output_file = self.output_dir / filename
+        
+        with open(output_file, 'w', encoding='utf-8') as f:
+            for item in data:
+                f.write(json.dumps(item, ensure_ascii=False) + '\n')
+        
+        print(f"Saved {filename}")
+
+if __name__ == "__main__":
+    preprocessor = DataPreprocessor()
+    preprocessor.process_dataset()
+
+# ============================================================================
+# FILE 6: 4_train_model.py
+# ============================================================================
+
+import torch
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    TrainingArguments,
+    Trainer,
+    DataCollatorForLanguageModeling,
+    EarlyStoppingCallback
+)
+from datasets import load_dataset
+from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+import os
+from pathlib import Path
+import json
+
+class VTuberModelTrainer:
+    def __init__(
+        self,
+        base_model="microsoft/phi-2",  # 2.7B params, good for 1B target with LoRA
+        data_dir="data/processed",
+        output_dir="models/checkpoints",
+        final_output_dir="models/final"
+    ):
+        self.base_model = base_model
+        self.data_dir = Path(data_dir)
+        self.output_dir = Path(output_dir)
+        self.final_output_dir = Path(final_output_dir)
+        
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.final_output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Multi-GPU setup
+        self.setup_multi_gpu()
+    
+    def setup_multi_gpu(self):
+        """Configure dual GPU setup"""
+        if torch.cuda.is_available():
+            n_gpus = torch.cuda.device_count()
+            print(f"Found {n_gpus} CUDA GPUs")
+            for i in range(n_gpus):
+                print(f"  GPU {i}: {torch.cuda.get_device_name(i)}")
+        else:
+            print("No CUDA GPUs found, using CPU")
+    
+    def load_tokenizer(self):
+        """Load and configure tokenizer"""
+        print(f"Loading tokenizer from {self.base_model}...")
+        tokenizer = AutoTokenizer.from_pretrained(
+            self.base_model,
+            trust_remote_code=True
+        )
+        
+        # Set pad token
+        if tokenizer.pad_token is None:
+            tokenizer.pad_token = tokenizer.eos_token
+            tokenizer.pad_token_id = tokenizer.eos_token_id
+        
+        return tokenizer
+    
+    def load_model(self):
+        """Load base model with LoRA"""
+        print(f"Loading model {self.base_model}...")
+        
+        # Load model with 8-bit quantization for memory efficiency
+        model = AutoModelForCausalLM.from_pretrained(
+            self.base_model,
+            load_in_8bit=True,
+            device_map="auto",  # Automatically distribute across GPUs
+            torch_dtype=torch.float16,
+            trust_remote_code=True
+        )
+        
+        # Prepare for k-bit training
+        model = prepare_model_for_kbit_training(model)
+        
+        # Configure LoRA
+        lora_config = LoraConfig(
+            r=32,  # Rank - higher = more parameters but better quality
+            lora_alpha=64,  # Scaling factor
+            target_modules=[
+                "q_proj",
+                "k_proj",
+                "v_proj",
+                "o_proj",
+                "gate_proj",
+                "up_proj",
+                "down_proj"
+            ],
+            lora_dropout=0.05,
+            bias="none",
+            task_type="CAUSAL_LM"
+        )
+        
+        model = get_peft_model(model, lora_config)
+        
+        # Print trainable parameters
+        trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        all_params = sum(p.numel() for p in model.parameters())
+        print(f"Trainable params: {trainable_params:,} ({100 * trainable_params / all_params:.2f}%)")
+        
+        return model
+    
+    def load_datasets(self, tokenizer):
+        """Load and tokenize datasets"""
+        print("Loading datasets...")
+        
+        dataset = load_dataset(
+            'json',
+            data_files={
+                'train': str(self.data_dir / 'train.jsonl'),
+                'validation': str(self.data_dir / 'val.jsonl'),
+                'test': str(self.data_dir / 'test.jsonl')
+            }
+        )
+        
+        print(f"Train samples: {len(dataset['train'])}")
+        print(f"Validation samples: {len(dataset['validation'])}")
+        print(f"Test samples: {len(dataset['test'])}")
+        
+        # Tokenization function
+        def tokenize_function(examples):
+            outputs = tokenizer(
+                examples['text'],
+                truncation=True,
+                max_length=1024,
+                padding='max_length',
+                return_tensors=None
+            )
+            outputs['labels'] = outputs['input_ids'].copy()
+            return outputs
+        
+        print("Tokenizing datasets...")
+        tokenized_dataset = dataset.map(
+            tokenize_function,
+            batched=True,
+            remove_columns=dataset['train'].column_names,
+            desc="Tokenizing"
+        )
+        
+        return tokenized_dataset
+    
+    def train(self):
+        """Main training function"""
+        # Load tokenizer
+        tokenizer = self.load_tokenizer()
+        
+        # Load model
+        model = self.load_model()
+        
+        # Load datasets
+        tokenized_dataset = self.load_datasets(tokenizer)
+        
+        # Data collator
+        data_collator = DataCollatorForLanguageModeling(
+            tokenizer=tokenizer,
+            mlm=False
+        )
+        
+        # Calculate batch size based on available memory
+        # Dual GPU setup with ~12GB each = ~24GB total
+        per_device_batch = 2
+        gradient_accumulation = 8
+        effective_batch_size = per_device_batch * gradient_accumulation * torch.cuda.device_count()
+        
+        print(f"\nTraining configuration:")
+        print(f"  Per-device batch size: {per_device_batch}")
+        print(f"  Gradient accumulation steps: {gradient_accumulation}")
+        print(f"  Effective batch size: {effective_batch_size}")
+        
+        # Training arguments
+        training_args = TrainingArguments(
+            output_dir=str(self.output_dir),
+            num_train_epochs=3,
+            per_device_train_batch_size=per_device_batch,
+            per_device_eval_batch_size=per_device_batch,
+            gradient_accumulation_steps=gradient_accumulation,
+            learning_rate=2e-4,
+            weight_decay=0.01,
+            warmup_steps=100,
+            lr_scheduler_type="cosine",
+            
+            # Multi-GPU settings
+            ddp_find_unused_parameters=False,
+            
+            # Optimization
+            fp16=True,
+            optim="adamw_torch",
+            max_grad_norm=1.0,
+            
+            # Logging
+            logging_dir=str(self.output_dir / "logs"),
+            logging_steps=10,
+            logging_first_step=True,
+            
+            # Evaluation
+            evaluation_strategy="steps",
+            eval_steps=200,
+            save_strategy="steps",
+            save_steps=200,
+            save_total_limit=3,
+            load_best_model_at_end=True,
+            metric_for_best_model="eval_loss",
+            
+            # Misc
+            report_to="tensorboard",
+            disable_tqdm=False,
+            dataloader_num_workers=4,
+        )
+        
+        # Trainer
+        trainer = Trainer(
+            model=model,
+            args=training_args,
+            train_dataset=tokenized_dataset['train'],
+            eval_dataset=tokenized_dataset['validation'],
+            data_collator=data_collator,
+            callbacks=[EarlyStoppingCallback(early_stopping_patience=3)]
+        )
+        
+        # Train
+        print("\n" + "="*50)
+        print("Starting training...")
+        print("="*50 + "\n")
+        
+        trainer.train()
+        
+        # Save final model
+        print("\nSaving final model...")
+        trainer.save_model(str(self.final_output_dir))
+        tokenizer.save_pretrained(str(self.final_output_dir))
+        
+        # Save training info
+        training_info = {
+            'base_model': self.base_model,
+            'final_loss': trainer.state.log_history[-1].get('eval_loss', 'N/A'),
+            'total_steps': trainer.state.global_step,
+            'epochs_completed': trainer.state.epoch
+        }
+        
+        with open(self.final_output_dir / 'training_info.json', 'w') as f:
+            json.dump(training_info, f, indent=2)
+        
+        print(f"\nTraining complete! Model saved to {self.final_output_dir}")
+        
+        return trainer
+
+if __name__ == "__main__":
+    # You can change the base model here
+    # Options: "microsoft/phi-2" (2.7B), "stabilityai/stablelm-2-1_6b", "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+    
+    trainer = VTuberModelTrainer(
+        base_model="microsoft/phi-2"
+    )
+    
+    trainer.train()

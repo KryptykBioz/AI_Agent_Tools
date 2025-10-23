@@ -1,0 +1,645 @@
+================================================================================
+FILE 1: src/extension.ts
+================================================================================
+
+// extension.ts
+import * as vscode from 'vscode';
+import axios from 'axios';
+
+interface OllamaResponse {
+  model: string;
+  response: string;
+  done: boolean;
+}
+
+interface EditInstruction {
+  action: 'replace' | 'insert' | 'delete' | 'create';
+  file?: string;
+  startLine?: number;
+  endLine?: number;
+  content?: string;
+  position?: number;
+}
+
+export function activate(context: vscode.ExtensionContext) {
+  console.log('Ollama Code Editor extension is now active');
+
+  const disposable = vscode.commands.registerCommand(
+    'ollama-code-editor.editWithAgent',
+    async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showErrorMessage('No active editor found');
+        return;
+      }
+
+      // Get user prompt
+      const prompt = await vscode.window.showInputBox({
+        prompt: 'Enter your editing instruction',
+        placeHolder: 'e.g., Add error handling to this function',
+      });
+
+      if (!prompt) {
+        return;
+      }
+
+      // Get configuration
+      const config = vscode.workspace.getConfiguration('ollamaCodeEditor');
+      const agentModel = config.get<string>('agentModel', 'llama2');
+      const codingModel = config.get<string>('codingModel', 'codellama');
+      const ollamaUrl = config.get<string>('ollamaUrl', 'http://localhost:11434');
+      const useDedicatedCoder = config.get<boolean>('useDedicatedCoder', true);
+
+      // Show progress
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: 'Ollama Code Editor',
+          cancellable: true,
+        },
+        async (progress, token) => {
+          progress.report({ message: 'Analyzing your request...' });
+
+          try {
+            // Get current document context
+            const document = editor.document;
+            const selection = editor.selection;
+            const selectedText = document.getText(selection);
+            const fullText = document.getText();
+            const languageId = document.languageId;
+
+            // Build context for agent
+            const contextText = selectedText || fullText;
+            const agentPrompt = buildAgentPrompt(
+              prompt,
+              contextText,
+              languageId,
+              document.fileName
+            );
+
+            // Step 1: Get agent's analysis and editing plan
+            progress.report({ message: 'Getting editing plan from agent...' });
+            const agentResponse = await callOllama(
+              ollamaUrl,
+              agentModel,
+              agentPrompt,
+              token
+            );
+
+            if (!agentResponse) {
+              throw new Error('No response from agent');
+            }
+
+            // Step 2: Parse or refine with coding model
+            progress.report({ message: 'Generating code edits...' });
+            let editInstructions: EditInstruction[];
+
+            if (useDedicatedCoder) {
+              // Use dedicated coding model to generate actual code
+              const codingPrompt = buildCodingPrompt(
+                agentResponse,
+                contextText,
+                languageId
+              );
+              const codingResponse = await callOllama(
+                ollamaUrl,
+                codingModel,
+                codingPrompt,
+                token
+              );
+              editInstructions = parseEditInstructions(codingResponse, contextText);
+            } else {
+              // Parse agent's response directly
+              editInstructions = parseEditInstructions(agentResponse, contextText);
+            }
+
+            // Step 3: Apply edits
+            progress.report({ message: 'Applying edits...' });
+            await applyEdits(editor, editInstructions);
+
+            vscode.window.showInformationMessage('Code edits applied successfully!');
+          } catch (error) {
+            if (token.isCancellationRequested) {
+              vscode.window.showInformationMessage('Operation cancelled');
+            } else {
+              vscode.window.showErrorMessage(
+                `Error: ${error instanceof Error ? error.message : 'Unknown error'}`
+              );
+            }
+          }
+        }
+      );
+    }
+  );
+
+  context.subscriptions.push(disposable);
+}
+
+function buildAgentPrompt(
+  userPrompt: string,
+  code: string,
+  language: string,
+  fileName: string
+): string {
+  return `You are a code editing assistant. The user wants to modify their ${language} code.
+
+File: ${fileName}
+Current code:
+\`\`\`${language}
+${code}
+\`\`\`
+
+User request: ${userPrompt}
+
+Please analyze this request and provide clear editing instructions. Describe what changes need to be made and provide the modified code. Format your response with the complete updated code in a code block.`;
+}
+
+function buildCodingPrompt(
+  agentPlan: string,
+  originalCode: string,
+  language: string
+): string {
+  return `You are a code generation assistant. Based on the following editing plan, generate the complete modified code.
+
+Editing plan:
+${agentPlan}
+
+Original code:
+\`\`\`${language}
+${originalCode}
+\`\`\`
+
+Provide the complete updated code in a single code block. Include all necessary changes while preserving the structure and style of the original code.`;
+}
+
+async function callOllama(
+  baseUrl: string,
+  model: string,
+  prompt: string,
+  token: vscode.CancellationToken
+): Promise<string> {
+  let fullResponse = '';
+
+  try {
+    const response = await axios.post(
+      `${baseUrl}/api/generate`,
+      {
+        model: model,
+        prompt: prompt,
+        stream: true,
+      },
+      {
+        responseType: 'stream',
+        cancelToken: new axios.CancelToken((cancel) => {
+          token.onCancellationRequested(() => cancel());
+        }),
+      }
+    );
+
+    return new Promise((resolve, reject) => {
+      response.data.on('data', (chunk: Buffer) => {
+        const lines = chunk.toString().split('\n').filter(Boolean);
+        for (const line of lines) {
+          try {
+            const json: OllamaResponse = JSON.parse(line);
+            fullResponse += json.response;
+            if (json.done) {
+              resolve(fullResponse);
+            }
+          } catch (e) {
+            // Skip invalid JSON
+          }
+        }
+      });
+
+      response.data.on('error', reject);
+      response.data.on('end', () => {
+        if (fullResponse) {
+          resolve(fullResponse);
+        } else {
+          reject(new Error('Empty response from Ollama'));
+        }
+      });
+    });
+  } catch (error) {
+    if (axios.isCancel(error)) {
+      throw new Error('Request cancelled');
+    }
+    throw error;
+  }
+}
+
+function parseEditInstructions(
+  response: string,
+  originalCode: string
+): EditInstruction[] {
+  // Extract code blocks from response
+  const codeBlockRegex = /```(?:\w+)?\n([\s\S]*?)```/g;
+  const matches = [...response.matchAll(codeBlockRegex)];
+
+  if (matches.length > 0) {
+    // Use the last code block as the new content
+    const newCode = matches[matches.length - 1][1].trim();
+    return [
+      {
+        action: 'replace',
+        startLine: 0,
+        endLine: originalCode.split('\n').length,
+        content: newCode,
+      },
+    ];
+  }
+
+  // Fallback: if no code blocks, try to extract meaningful content
+  // Look for clear code patterns
+  const lines = response.split('\n');
+  const codeLines = lines.filter(
+    (line) =>
+      line.trim() &&
+      !line.match(/^(here|this|the|i|you|we|let|based|now|first)/i) &&
+      (line.includes('{') ||
+        line.includes('}') ||
+        line.includes('(') ||
+        line.includes(';') ||
+        line.includes('='))
+  );
+
+  if (codeLines.length > 0) {
+    return [
+      {
+        action: 'replace',
+        startLine: 0,
+        endLine: originalCode.split('\n').length,
+        content: codeLines.join('\n'),
+      },
+    ];
+  }
+
+  throw new Error(
+    'Could not extract code from response. Please ensure the model provides code in a code block.'
+  );
+}
+
+async function applyEdits(
+  editor: vscode.TextEditor,
+  instructions: EditInstruction[]
+): Promise<void> {
+  const document = editor.document;
+
+  await editor.edit((editBuilder) => {
+    for (const instruction of instructions) {
+      switch (instruction.action) {
+        case 'replace':
+          if (
+            instruction.startLine !== undefined &&
+            instruction.endLine !== undefined &&
+            instruction.content !== undefined
+          ) {
+            const startPos = new vscode.Position(instruction.startLine, 0);
+            const endPos = new vscode.Position(
+              instruction.endLine,
+              document.lineAt(
+                Math.min(instruction.endLine, document.lineCount - 1)
+              ).text.length
+            );
+            const range = new vscode.Range(startPos, endPos);
+            editBuilder.replace(range, instruction.content);
+          }
+          break;
+
+        case 'insert':
+          if (
+            instruction.startLine !== undefined &&
+            instruction.content !== undefined
+          ) {
+            const pos = new vscode.Position(instruction.startLine, 0);
+            editBuilder.insert(pos, instruction.content + '\n');
+          }
+          break;
+
+        case 'delete':
+          if (
+            instruction.startLine !== undefined &&
+            instruction.endLine !== undefined
+          ) {
+            const startPos = new vscode.Position(instruction.startLine, 0);
+            const endPos = new vscode.Position(
+              instruction.endLine + 1,
+              0
+            );
+            const range = new vscode.Range(startPos, endPos);
+            editBuilder.delete(range);
+          }
+          break;
+      }
+    }
+  });
+
+  // Format the document after edits
+  await vscode.commands.executeCommand('editor.action.formatDocument');
+}
+
+export function deactivate() {}
+
+
+================================================================================
+FILE 2: package.json
+================================================================================
+
+{
+  "name": "ollama-code-editor",
+  "displayName": "Ollama Code Editor",
+  "description": "AI-powered code editing using local Ollama models",
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Machine Learning",
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:ollama-code-editor.editWithAgent"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "ollama-code-editor.editWithAgent",
+        "title": "Edit with Ollama Agent"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "ollama-code-editor.editWithAgent",
+        "key": "ctrl+shift+o",
+        "mac": "cmd+shift+o",
+        "when": "editorTextFocus"
+      }
+    ],
+    "configuration": {
+      "title": "Ollama Code Editor",
+      "properties": {
+        "ollamaCodeEditor.agentModel": {
+          "type": "string",
+          "default": "llama2",
+          "description": "The Ollama model to use for understanding requests and planning edits"
+        },
+        "ollamaCodeEditor.codingModel": {
+          "type": "string",
+          "default": "codellama",
+          "description": "The Ollama model to use for generating code (when useDedicatedCoder is true)"
+        },
+        "ollamaCodeEditor.ollamaUrl": {
+          "type": "string",
+          "default": "http://localhost:11434",
+          "description": "The URL of your local Ollama server"
+        },
+        "ollamaCodeEditor.useDedicatedCoder": {
+          "type": "boolean",
+          "default": true,
+          "description": "Use a separate coding model to generate the actual code changes"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.0"
+  }
+}
+
+
+================================================================================
+FILE 3: tsconfig.json
+================================================================================
+
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2020",
+    "outDir": "out",
+    "lib": ["ES2020"],
+    "sourceMap": true,
+    "rootDir": "src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true
+  },
+  "exclude": ["node_modules", ".vscode-test"]
+}
+
+
+================================================================================
+FILE 4: README.md
+================================================================================
+
+# Ollama Code Editor Extension
+
+A VS Code extension that integrates with local Ollama models to provide AI-powered code editing capabilities. This extension allows you to describe code changes in natural language, and the agent will intelligently modify your code.
+
+## Features
+
+- **Natural Language Editing**: Describe what you want to change in plain English
+- **Two-Stage Processing**: Uses an agent model to understand intent and optionally a dedicated coding model to generate precise code
+- **Local & Private**: All processing happens on your local Ollama instance
+- **Context-Aware**: Understands your current code and makes intelligent modifications
+- **Multiple Model Support**: Configure different models for planning and code generation
+
+## Prerequisites
+
+1. **Ollama**: Install Ollama from [ollama.ai](https://ollama.ai)
+2. **Models**: Pull at least one model, e.g.:
+   ```bash
+   ollama pull llama2
+   ollama pull codellama
+   ```
+
+## Installation
+
+1. Clone or download this repository
+2. Open the folder in VS Code
+3. Run `npm install` to install dependencies
+4. Press `F5` to open a new VS Code window with the extension loaded
+
+## Usage
+
+### Basic Usage
+
+1. Open a code file in VS Code
+2. Select the code you want to edit (optional - if nothing is selected, the entire file will be used as context)
+3. Press `Ctrl+Shift+O` (or `Cmd+Shift+O` on Mac) or run the command "Edit with Ollama Agent"
+4. Enter your editing instruction, such as:
+   - "Add error handling to this function"
+   - "Convert this to use async/await"
+   - "Add TypeScript types"
+   - "Refactor this code to be more readable"
+   - "Add JSDoc comments"
+
+### Example Prompts
+
+- **Add features**: "Add input validation to this function"
+- **Refactor**: "Split this large function into smaller helper functions"
+- **Fix issues**: "Fix the error handling in this code"
+- **Improve quality**: "Make this code more efficient"
+- **Add documentation**: "Add comprehensive comments explaining what this does"
+- **Convert syntax**: "Convert this from callbacks to promises"
+
+## Configuration
+
+Open VS Code settings and search for "Ollama Code Editor" to configure:
+
+### `ollamaCodeEditor.agentModel`
+- **Default**: `llama2`
+- **Description**: The model used to understand your request and plan edits
+- **Recommended models**: `llama2`, `mistral`, `mixtral`
+
+### `ollamaCodeEditor.codingModel`
+- **Default**: `codellama`
+- **Description**: The specialized model used for generating code
+- **Recommended models**: `codellama`, `deepseek-coder`, `phind-codellama`
+
+### `ollamaCodeEditor.ollamaUrl`
+- **Default**: `http://localhost:11434`
+- **Description**: The URL of your local Ollama server
+
+### `ollamaCodeEditor.useDedicatedCoder`
+- **Default**: `true`
+- **Description**: When enabled, uses a two-stage process where the agent model plans the edits and the coding model generates the code. When disabled, uses only the agent model.
+
+## How It Works
+
+1. **User Input**: You provide a natural language description of the changes you want
+2. **Context Gathering**: The extension captures your current code, language, and selection
+3. **Agent Analysis**: The agent model analyzes your request and creates an editing plan
+4. **Code Generation** (optional): If using a dedicated coder, it generates the precise code changes
+5. **Application**: The extension applies the edits to your document
+6. **Formatting**: Automatically formats the document after changes
+
+## Architecture
+
+### Two-Stage Processing (Recommended)
+```
+User Prompt → Agent Model (planning) → Coding Model (generation) → Code Edits
+```
+
+### Single-Stage Processing
+```
+User Prompt → Agent Model → Code Edits
+```
+
+## Tips for Best Results
+
+1. **Be specific**: Instead of "improve this", try "add error handling and input validation"
+2. **Use context**: Select the specific code you want modified rather than entire files
+3. **Choose the right model**: Use specialized coding models like `codellama` for better code generation
+4. **Iterate**: You can run multiple edits sequentially to refine the code
+5. **Review changes**: Always review the AI-generated changes before committing
+
+## Troubleshooting
+
+### "No response from agent"
+- Ensure Ollama is running: `ollama serve`
+- Check that the model is downloaded: `ollama list`
+- Verify the Ollama URL in settings
+
+### "Could not extract code from response"
+- Try using a dedicated coding model (enable `useDedicatedCoder`)
+- Use more specific prompts
+- Try a different model that's better at code generation
+
+### Slow response times
+- Use smaller models for faster responses
+- Consider using only the agent model (disable `useDedicatedCoder`)
+- Ensure your system has adequate resources
+
+## Recommended Model Combinations
+
+| Use Case | Agent Model | Coding Model |
+|----------|-------------|--------------|
+| Fast, general edits | `llama2` | `codellama` |
+| High quality | `mixtral` | `deepseek-coder` |
+| Lightweight | `mistral` | `codellama:7b` |
+| Python-focused | `llama2` | `codellama:python` |
+
+## Development
+
+### Project Structure
+```
+.
+├── src/
+│   └── extension.ts       # Main extension code
+├── package.json           # Extension manifest
+├── tsconfig.json         # TypeScript configuration
+└── README.md            # This file
+```
+
+### Building
+```bash
+npm install
+npm run compile
+```
+
+### Testing
+Press `F5` in VS Code to open an Extension Development Host window.
+
+## License
+
+MIT
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit issues or pull requests.
+
+## Future Enhancements
+
+- Multi-file editing support
+- Diff preview before applying changes
+- Conversation history
+- Custom prompt templates
+- Integration with version control
+- Undo/redo specific AI edits
+
+
+================================================================================
+SETUP INSTRUCTIONS
+================================================================================
+
+1. Create folder structure:
+   ollama-code-editor/
+   ├── src/
+   │   └── extension.ts
+   ├── package.json
+   ├── tsconfig.json
+   └── README.md
+
+2. Copy the content from each section above into the corresponding file
+
+3. Install dependencies:
+   npm install
+
+4. Install Ollama models:
+   ollama pull llama2
+   ollama pull codellama
+
+5. Press F5 in VS Code to test the extension
+
+6. Use Ctrl+Shift+O (Cmd+Shift+O on Mac) to activate in any code file

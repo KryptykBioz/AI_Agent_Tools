@@ -1,0 +1,470 @@
+# ============================================================================
+# FILE 7: 5_test_model.py
+# ============================================================================
+
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from pathlib import Path
+import json
+
+class ModelTester:
+    def __init__(self, model_path="models/final"):
+        self.model_path = Path(model_path)
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        
+        print(f"Loading model from {model_path}...")
+        self.tokenizer = AutoTokenizer.from_pretrained(
+            model_path,
+            trust_remote_code=True
+        )
+        
+        # Load model with LoRA weights
+        self.model = AutoModelForCausalLM.from_pretrained(
+            model_path,
+            device_map="auto",
+            torch_dtype=torch.float16,
+            trust_remote_code=True
+        )
+        
+        self.model.eval()
+        print("Model loaded successfully!")
+    
+    def generate(self, prompt, max_length=200, temperature=0.8, top_p=0.9, top_k=50):
+        """Generate text from prompt"""
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        
+        with torch.no_grad():
+            outputs = self.model.generate(
+                **inputs,
+                max_length=max_length,
+                temperature=temperature,
+                top_p=top_p,
+                top_k=top_k,
+                do_sample=True,
+                pad_token_id=self.tokenizer.pad_token_id,
+                eos_token_id=self.tokenizer.eos_token_id,
+                repetition_penalty=1.15
+            )
+        
+        generated_text = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
+        return generated_text
+    
+    def interactive_test(self):
+        """Interactive testing mode"""
+        print("\n" + "="*50)
+        print("Interactive Model Testing")
+        print("="*50)
+        print("Type 'quit' to exit\n")
+        
+        while True:
+            prompt = input("Prompt: ")
+            
+            if prompt.lower() == 'quit':
+                break
+            
+            print("\nGenerating...\n")
+            response = self.generate(prompt)
+            print(f"Response: {response}\n")
+            print("-"*50 + "\n")
+    
+    def run_test_suite(self):
+        """Run predefined tests"""
+        test_prompts = [
+            "Hey chat, what game should we play today?",
+            "Let's play this game! First, I need to",
+            "Chat, what do you think about",
+            "To defeat this boss, you should",
+            "Welcome back to the stream everyone!",
+            "This level is so hard! I think the strategy is to",
+            "Let me explain how this mechanic works:",
+            "That was such a close call! Did you see when",
+        ]
+        
+        print("\n" + "="*50)
+        print("Running Test Suite")
+        print("="*50 + "\n")
+        
+        results = []
+        
+        for i, prompt in enumerate(test_prompts, 1):
+            print(f"Test {i}/{len(test_prompts)}")
+            print(f"Prompt: {prompt}")
+            response = self.generate(prompt, max_length=150)
+            print(f"Response: {response}\n")
+            print("-"*50 + "\n")
+            
+            results.append({
+                'prompt': prompt,
+                'response': response
+            })
+        
+        # Save results
+        with open('test_results.json', 'w', encoding='utf-8') as f:
+            json.dump(results, f, indent=2, ensure_ascii=False)
+        
+        print("Test results saved to test_results.json")
+
+if __name__ == "__main__":
+    tester = ModelTester()
+    
+    # Run test suite
+    tester.run_test_suite()
+    
+    # Interactive mode
+    tester.interactive_test()
+
+
+# ============================================================================
+# FILE 8: 6_convert_to_gguf.py
+# ============================================================================
+
+import subprocess
+import shutil
+from pathlib import Path
+import sys
+
+class GGUFConverter:
+    def __init__(
+        self,
+        model_path="models/final",
+        output_dir="models/gguf",
+        llama_cpp_path="llama.cpp"
+    ):
+        self.model_path = Path(model_path)
+        self.output_dir = Path(output_dir)
+        self.llama_cpp_path = Path(llama_cpp_path)
+        
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Check if llama.cpp exists
+        if not self.llama_cpp_path.exists():
+            print(f"Error: llama.cpp not found at {self.llama_cpp_path}")
+            print("Please run: git clone https://github.com/ggerganov/llama.cpp && cd llama.cpp && make")
+            sys.exit(1)
+    
+    def convert_to_fp16(self):
+        """Convert model to FP16 GGUF"""
+        print("Converting model to FP16 GGUF format...")
+        
+        convert_script = self.llama_cpp_path / "convert.py"
+        output_file = self.output_dir / "vtuber-model-f16.gguf"
+        
+        cmd = [
+            "python",
+            str(convert_script),
+            str(self.model_path),
+            "--outtype", "f16",
+            "--outfile", str(output_file)
+        ]
+        
+        try:
+            subprocess.run(cmd, check=True)
+            print(f"FP16 model saved to: {output_file}")
+            return output_file
+        except subprocess.CalledProcessError as e:
+            print(f"Error during conversion: {e}")
+            return None
+    
+    def quantize_model(self, input_file, quant_type="q4_k_m"):
+        """Quantize GGUF model"""
+        print(f"Quantizing model to {quant_type}...")
+        
+        quantize_binary = self.llama_cpp_path / "quantize"
+        output_file = self.output_dir / f"vtuber-model-{quant_type}.gguf"
+        
+        cmd = [
+            str(quantize_binary),
+            str(input_file),
+            str(output_file),
+            quant_type
+        ]
+        
+        try:
+            subprocess.run(cmd, check=True)
+            print(f"Quantized model saved to: {output_file}")
+            return output_file
+        except subprocess.CalledProcessError as e:
+            print(f"Error during quantization: {e}")
+            return None
+    
+    def convert_and_quantize(self):
+        """Full conversion pipeline"""
+        print("\n" + "="*50)
+        print("Converting Model to GGUF Format")
+        print("="*50 + "\n")
+        
+        # Convert to FP16
+        fp16_file = self.convert_to_fp16()
+        
+        if not fp16_file:
+            print("Conversion failed!")
+            return
+        
+        print("\n" + "-"*50 + "\n")
+        
+        # Quantize to different formats
+        quant_types = [
+            "q4_0",    # Smallest, fastest
+            "q4_k_m",  # Good balance (recommended)
+            "q5_k_m",  # Higher quality
+            "q8_0"     # Highest quality
+        ]
+        
+        quantized_files = []
+        
+        for quant_type in quant_types:
+            print()
+            quant_file = self.quantize_model(fp16_file, quant_type)
+            if quant_file:
+                quantized_files.append(quant_file)
+                # Print file size
+                size_mb = quant_file.stat().st_size / (1024 * 1024)
+                print(f"  Size: {size_mb:.1f} MB")
+            print()
+        
+        print("="*50)
+        print(f"Conversion complete! Models saved to: {self.output_dir}")
+        print("\nAvailable models:")
+        for f in quantized_files:
+            size_mb = f.stat().st_size / (1024 * 1024)
+            print(f"  - {f.name} ({size_mb:.1f} MB)")
+
+if __name__ == "__main__":
+    converter = GGUFConverter()
+    converter.convert_and_quantize()
+
+
+# ============================================================================
+# FILE 9: 7_create_ollama_model.py
+# ============================================================================
+
+import subprocess
+from pathlib import Path
+import sys
+
+class OllamaModelCreator:
+    def __init__(self, gguf_path="models/gguf/vtuber-model-q4_k_m.gguf"):
+        self.gguf_path = Path(gguf_path)
+        
+        if not self.gguf_path.exists():
+            print(f"Error: GGUF model not found at {self.gguf_path}")
+            print("Please run 6_convert_to_gguf.py first")
+            sys.exit(1)
+        
+        # Check if Ollama is installed
+        try:
+            subprocess.run(["ollama", "--version"], capture_output=True, check=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            print("Error: Ollama is not installed or not in PATH")
+            print("Install from: https://ollama.ai")
+            sys.exit(1)
+    
+    def create_modelfile(self, output_path="Modelfile"):
+        """Create Ollama Modelfile"""
+        modelfile_content = f"""# VTuber AI Model
+FROM {self.gguf_path.absolute()}
+
+# Model parameters
+PARAMETER temperature 0.8
+PARAMETER top_p 0.9
+PARAMETER top_k 40
+PARAMETER repeat_penalty 1.15
+PARAMETER num_ctx 2048
+
+# System prompt
+SYSTEM \"\"\"You are an enthusiastic VTuber and gaming streamer with deep knowledge of video games. You engage with your audience naturally, using casual language and gaming terminology. You're energetic, friendly, and love sharing gaming tips and strategies. You often reference game mechanics, community memes, and streaming culture.\"\"\"
+
+# Template for chat format
+TEMPLATE \"\"\"{{{{ if .System }}}}<|system|>
+{{{{ .System }}}}<|end|>
+{{{{ end }}}}{{{{ if .Prompt }}}}<|user|>
+{{{{ .Prompt }}}}<|end|>
+{{{{ end }}}}<|assistant|>
+{{{{ .Response }}}}<|end|>
+\"\"\"
+"""
+        
+        with open(output_path, 'w') as f:
+            f.write(modelfile_content)
+        
+        print(f"Modelfile created: {output_path}")
+        return output_path
+    
+    def create_ollama_model(self, model_name="vtuber-model"):
+        """Create Ollama model"""
+        print(f"\nCreating Ollama model '{model_name}'...")
+        
+        # Create Modelfile
+        modelfile = self.create_modelfile()
+        
+        # Create model in Ollama
+        cmd = ["ollama", "create", model_name, "-f", modelfile]
+        
+        try:
+            subprocess.run(cmd, check=True)
+            print(f"\n✓ Model '{model_name}' created successfully!")
+            print(f"\nTest it with: ollama run {model_name}")
+            return True
+        except subprocess.CalledProcessError as e:
+            print(f"Error creating Ollama model: {e}")
+            return False
+
+if __name__ == "__main__":
+    creator = OllamaModelCreator()
+    creator.create_ollama_model()
+
+
+# ============================================================================
+# FILE 10: 8_ollama_integration.py
+# ============================================================================
+
+import ollama
+import json
+from pathlib import Path
+
+class OllamaVTuberInterface:
+    def __init__(self, model_name="vtuber-model"):
+        self.model_name = model_name
+        self.conversation_history = []
+        self.max_history = 10  # Keep last 10 exchanges
+    
+    def generate_response(self, user_input, include_history=True):
+        """Generate response using Ollama"""
+        messages = []
+        
+        if include_history:
+            messages.extend(self.conversation_history)
+        
+        messages.append({
+            'role': 'user',
+            'content': user_input
+        })
+        
+        try:
+            response = ollama.chat(
+                model=self.model_name,
+                messages=messages,
+                options={
+                    'temperature': 0.8,
+                    'top_p': 0.9,
+                    'top_k': 40,
+                    'repeat_penalty': 1.15
+                }
+            )
+            
+            assistant_message = response['message']['content']
+            
+            # Update conversation history
+            self.conversation_history.append({
+                'role': 'user',
+                'content': user_input
+            })
+            self.conversation_history.append({
+                'role': 'assistant',
+                'content': assistant_message
+            })
+            
+            # Trim history if too long
+            if len(self.conversation_history) > self.max_history * 2:
+                self.conversation_history = self.conversation_history[-self.max_history * 2:]
+            
+            return assistant_message
+            
+        except Exception as e:
+            return f"Error: {e}"
+    
+    def stream_response(self, user_input):
+        """Stream response token by token"""
+        messages = self.conversation_history + [{
+            'role': 'user',
+            'content': user_input
+        }]
+        
+        full_response = ""
+        
+        try:
+            stream = ollama.chat(
+                model=self.model_name,
+                messages=messages,
+                stream=True,
+                options={
+                    'temperature': 0.8,
+                    'top_p': 0.9,
+                }
+            )
+            
+            for chunk in stream:
+                content = chunk['message']['content']
+                full_response += content
+                yield content
+            
+            # Update history
+            self.conversation_history.append({
+                'role': 'user',
+                'content': user_input
+            })
+            self.conversation_history.append({
+                'role': 'assistant',
+                'content': full_response
+            })
+            
+            if len(self.conversation_history) > self.max_history * 2:
+                self.conversation_history = self.conversation_history[-self.max_history * 2:]
+                
+        except Exception as e:
+            yield f"Error: {e}"
+    
+    def clear_history(self):
+        """Clear conversation history"""
+        self.conversation_history = []
+    
+    def save_conversation(self, filename="conversation.json"):
+        """Save conversation to file"""
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(self.conversation_history, f, indent=2, ensure_ascii=False)
+        print(f"Conversation saved to {filename}")
+    
+    def interactive_chat(self):
+        """Interactive chat mode"""
+        print("\n" + "="*60)
+        print("VTuber AI Interactive Chat")
+        print("="*60)
+        print("Commands:")
+        print("  'quit' - Exit")
+        print("  'clear' - Clear conversation history")
+        print("  'save' - Save conversation")
+        print("  'stream' - Toggle streaming mode")
+        print("="*60 + "\n")
+        
+        streaming = False
+        
+        while True:
+            user_input = input("You: ")
+            
+            if user_input.lower() == 'quit':
+                break
+            elif user_input.lower() == 'clear':
+                self.clear_history()
+                print("Conversation history cleared.\n")
+                continue
+            elif user_input.lower() == 'save':
+                self.save_conversation()
+                continue
+            elif user_input.lower() == 'stream':
+                streaming = not streaming
+                print(f"Streaming mode: {'ON' if streaming else 'OFF'}\n")
+                continue
+            
+            print("\nVTuber: ", end="", flush=True)
+            
+            if streaming:
+                for token in self.stream_response(user_input):
+                    print(token, end="", flush=True)
+                print("\n")
+            else:
+                response = self.generate_response(user_input)
+                print(f"{response}\n")
+
+if __name__ == "__main__":
+    interface = OllamaVTuberInterface()
+    interface.interactive_chat()
