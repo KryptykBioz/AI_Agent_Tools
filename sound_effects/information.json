@@ -1,0 +1,61 @@
+{
+  "tool_name": "sound",
+  "control_variable_name": "USE_SOUND_EFFECTS",
+  "control_variable_value": false,
+  "tool_description": "Play sound effects from library to enhance interactions",
+  "available_commands": [
+    {
+      "command": "play",
+      "args": ["sound_name: str", "volume: Optional[float]"],
+      "description": "Play a sound effect by name with optional volume override",
+      "format": "{\"tool\": \"sound.play\", \"args\": [\"squee\"]}"
+    },
+    {
+      "command": "list",
+      "args": [],
+      "description": "List all available sound effects",
+      "format": "{\"tool\": \"sound.list\", \"args\": []}"
+    },
+    {
+      "command": "stop",
+      "args": [],
+      "description": "Stop all currently playing sounds",
+      "format": "{\"tool\": \"sound.stop\", \"args\": []}"
+    }
+  ],
+  "tool_usage_examples": [
+    "{\"tool\": \"sound.play\", \"args\": [\"squee\"]}",
+    "{\"tool\": \"sound.play\", \"args\": [\"jumpscare\", 0.8]}",
+    "{\"tool\": \"sound.play\", \"args\": [\"hello\"]}",
+    "{\"tool\": \"sound.list\", \"args\": []}",
+    "{\"tool\": \"sound.stop\", \"args\": []}"
+  ],
+  "tool_usage_guidance": [
+    "Use sound effects to punctuate reactions and enhance emotional expression",
+    "Available sounds: hello, impostor, jumpscare, squee",
+    "Play celebration sounds (squee) for achievements or success",
+    "Use jumpscare for surprise or startling moments",
+    "Volume range: 0.0 (silent) to 1.0 (full volume), defaults to global volume setting",
+    "Sounds play asynchronously and don't block other actions",
+    "Use sparingly - sounds should enhance, not overwhelm the experience"
+  ],
+  "proactive_triggers": [
+    "When expressing celebration or achievement",
+    "When creating emotional atmosphere",
+    "When user accomplishes something noteworthy",
+    "When reacting with surprise or excitement",
+    "When appropriate sound would enhance the emotional context"
+  ],
+  "cooldown_seconds": 2,
+  "timeout_seconds": 5,
+  "retry_on_failure": false,
+  "max_retries": 0,
+  "metadata": {
+    "category": "Avatar Control",
+    "display_name": "Sound Effects",
+    "version": "2.0.0",
+    "requires_api": false,
+    "dependencies": ["pygame"],
+    "notes": "Refactored to modern modular tool architecture. Sound files must be .mp3 format."
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "tool_name": "reminders",
+  "control_variable_name": "USE_REMINDERS",
+  "control_variable_value": false,
+  "tool_description": "Create and manage time-based reminders with natural language time parsing. Reminders persist across sessions and notify proactively when due.",
+  "available_commands": [
+    {
+      "command": "create",
+      "args": ["description: str", "time_phrase: str"],
+      "description": "Create a new reminder with natural language time specification",
+      "format": "{\"tool\": \"reminders.create\", \"args\": [\"take a break\", \"in 30 minutes\"]}"
+    },
+    {
+      "command": "list",
+      "args": [],
+      "description": "List all active reminders sorted by scheduled time",
+      "format": "{\"tool\": \"reminders.list\", \"args\": []}"
+    },
+    {
+      "command": "delete",
+      "args": ["reminder_id: str"],
+      "description": "Delete a specific reminder by ID",
+      "format": "{\"tool\": \"reminders.delete\", \"args\": [\"1234567890\"]}"
+    },
+    {
+      "command": "clear",
+      "args": ["reminder_id: str"],
+      "description": "Clear a specific reminder (alias for delete)",
+      "format": "{\"tool\": \"reminders.clear\", \"args\": [\"1234567890\"]}"
+    }
+  ],
+  "tool_usage_examples": [
+    "{\"tool\": \"reminders.create\", \"args\": [\"start streaming\", \"in 2 hours\"]}",
+    "{\"tool\": \"reminders.create\", \"args\": [\"edit videos\", \"tomorrow at 5pm\"]}",
+    "{\"tool\": \"reminders.create\", \"args\": [\"take a break\", \"in 20 minutes\"]}",
+    "{\"tool\": \"reminders.create\", \"args\": [\"watch anime\", \"next monday at 10am\"]}",
+    "{\"tool\": \"reminders.list\", \"args\": []}",
+    "{\"tool\": \"reminders.delete\", \"args\": [\"1234567890\"]}"
+  ],
+  "tool_usage_guidance": [
+    "Use reminders when user says 'remind me to...' or asks to remember something later",
+    "Natural time phrases supported: 'in X minutes/hours/days', 'tomorrow at Xpm', 'next monday at Xam'",
+    "Examples: 'in 5 minutes', 'in 2 hours', 'in 3 days', 'tomorrow at 3pm', 'next monday at 10am'",
+    "Reminders persist across agent restarts and system shutdowns",
+    "Overdue reminders are sent to your thought buffer immediately on startup",
+    "Every 30 minutes, you'll receive notifications about reminders due in the next 30 minutes",
+    "If no reminders are due soon, you'll see the next 3 upcoming reminders",
+    "Overdue reminders are sent up to 3 times, then automatically removed",
+    "After notifying the user about a reminder, use reminders.delete to clear it",
+    "Use reminders.list proactively when user asks about their reminders"
+  ],
+  "proactive_triggers": [
+    "When user says 'remind me to...'",
+    "When user asks 'what are my reminders' or 'do I have any reminders'",
+    "When user mentions needing to remember something later",
+    "When you receive overdue reminder notifications in thought buffer",
+    "Every 30 minutes for upcoming reminders (automatic background check)"
+  ],
+  "cooldown_seconds": 2,
+  "timeout_seconds": 5,
+  "retry_on_failure": false,
+  "max_retries": 0,
+  "metadata": {
+    "category": "Productivity",
+    "display_name": "Reminders & Timers",
+    "version": "3.0.0",
+    "requires_api": false,
+    "dependencies": [],
+    "notes": "Refactored for tool control system with proactive 30-minute notifications and automatic expiration after 3 notifications"
+  }
+}

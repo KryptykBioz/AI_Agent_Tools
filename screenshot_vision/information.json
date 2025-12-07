@@ -1,0 +1,51 @@
+{
+  "tool_name": "vision",
+  "control_variable_name": "USE_VISION",
+  "control_variable_value": false,
+  "tool_description": "Capture and analyze screenshots using computer vision models",
+  "available_commands": [
+    {
+      "command": "screenshot",
+      "args": [],
+      "description": "Capture screenshot for description of screen contents",
+      "format": "{\"tool\": \"vision.screenshot\", \"args\": []}"
+    },
+    {
+      "command": "analyze",
+      "args": ["query: str", "monitor: Optional[int]"],
+      "description": "Analyze current screen with specific question (optional monitor selection)",
+      "format": "{\"tool\": \"vision.analyze\", \"args\": [\"what do you see?\"]}"
+    }
+  ],
+  "tool_usage_examples": [
+    "{\"tool\": \"vision.analyze\", \"args\": [\"describe the UI layout\"]}",
+    "{\"tool\": \"vision.screenshot\", \"args\": []}",
+    "{\"tool\": \"vision.analyze\", \"args\": [\"what IDE is open?\", 0]}"
+  ],
+  "tool_usage_guidance": [
+    "Use screenshot to see and analyze what's on the primary screen",
+    "Use analyze with specific questions about screen content",
+    "Optional second argument for monitor index (0, 1, 2...) defaults to primary",
+    "Vision model processes images and provides detailed descriptions",
+    "Best for understanding UI state, debugging visual issues, and screen content analysis"
+  ],
+  "proactive_triggers": [
+    "When user asks 'what's on my screen'",
+    "When user requests to see current application state",
+    "When debugging visual issues",
+    "When user mentions needing to see UI elements",
+    "When context about screen content would help answer questions"
+  ],
+  "cooldown_seconds": 5,
+  "timeout_seconds": 20,
+  "retry_on_failure": false,
+  "max_retries": 0,
+  "metadata": {
+    "category": "Computer Vision",
+    "display_name": "Screenshot Vision",
+    "version": "2.0.0",
+    "requires_api": false,
+    "dependencies": ["pyautogui", "screeninfo", "Pillow", "requests"],
+    "notes": "Requires Ollama running with vision model. Refactored to modern architecture."
+  }
+}

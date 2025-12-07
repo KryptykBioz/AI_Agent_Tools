@@ -1,0 +1,25 @@
+{
+  "name": "minecraft-bot-server",
+  "version": "1.0.0",
+  "description": "Minecraft bot API server for AI agent control",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "mineflayer": "^4.11.1",
+    "mineflayer-pathfinder": "^2.4.3",
+    "mineflayer-collectblock": "^1.4.0",
+    "minecraft-data": "^3.48.0",
+    "vec3": "^0.1.8"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

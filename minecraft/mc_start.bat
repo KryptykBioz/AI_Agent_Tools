@@ -1,0 +1,1 @@
+node ./minecraft_bot/server.js

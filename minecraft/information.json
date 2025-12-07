@@ -1,0 +1,112 @@
+{
+  "tool_name": "minecraft",
+  "control_variable_name": "PLAYING_MINECRAFT",
+  "control_variable_value": true,
+  "tool_description": "Minecraft bot control with full command execution, vision, and situational awareness",
+  "available_commands": [
+    {
+      "command": "gather_resource",
+      "args": ["resource: str", "count: Optional[int]"],
+      "description": "Gather specified resource (wood, stone, ores, etc.)",
+      "format": "{\"tool\": \"minecraft.gather_resource\", \"args\": [\"resource to gather\", number to gather]}"
+    },
+    {
+      "command": "goto_location",
+      "args": ["x: float", "y: float", "z: float"],
+      "description": "Navigate to exact coordinates",
+      "format": "{\"tool\": \"minecraft.goto_location\", \"args\": [x-coordinate, y-coordinate, z-coordinate]}"
+    },
+    {
+      "command": "move_direction",
+      "args": ["direction: str", "distance: float"],
+      "description": "Move in a direction (forward, back, left, right)",
+      "format": "{\"tool\": \"minecraft.move_direction\", \"args\": [\"direction\", block number to move]}"
+    },
+    {
+      "command": "attack_entity",
+      "args": ["entity: str"],
+      "description": "Attack hostile mob or entity",
+      "format": "{\"tool\": \"minecraft.attack_entity\", \"args\": [\"mob name\"]}"
+    },
+    {
+      "command": "stop_movement",
+      "args": [],
+      "description": "Stop all movement immediately",
+      "format": "{\"tool\": \"minecraft.stop_movement\", \"args\": []}"
+    },
+    {
+      "command": "follow",
+      "args": ["target: str"],
+      "description": "Follow a player",
+      "format": "{\"tool\": \"minecraft.follow\", \"args\": [\"player name\"]}"
+    },
+    {
+      "command": "craft_item",
+      "args": ["item: str", "count: Optional[int]"],
+      "description": "Craft an item",
+      "format": "{\"tool\": \"minecraft.craft_item\", \"args\": [\"item to craft\", number to craft]}"
+    },
+    {
+      "command": "use_item",
+      "args": ["item: str"],
+      "description": "Use/consume an item",
+      "format": "{\"tool\": \"minecraft.use_item\", \"args\": [\"item name\"]}"
+    },
+    {
+      "command": "chat",
+      "args": ["message: str"],
+      "description": "Send chat message in game",
+      "format": "{\"tool\": \"minecraft.chat\", \"args\": [\"message\"]}"
+    },
+    {
+      "command": "build",
+      "args": ["structure: str", "size: Optional[int]"],
+      "description": "Build a structure",
+      "format": "{\"tool\": \"minecraft.build\", \"args\": [\"structure to build\", number to build]}"
+    }
+  ],
+  "tool_usage_examples": [
+    "{\"tool\": \"minecraft.gather_resource\", \"args\": [\"oak_log\", 5]}",
+    "{\"tool\": \"minecraft.goto_location\", \"args\": [100, 64, 200]}",
+    "{\"tool\": \"minecraft.move_direction\", \"args\": [\"forward\", 10]}",
+    "{\"tool\": \"minecraft.attack_entity\", \"args\": [\"zombie\"]}",
+    "{\"tool\": \"minecraft.stop_movement\", \"args\": []}",
+    "{\"tool\": \"minecraft.follow\", \"args\": [\"player\"]}",
+    "{\"tool\": \"minecraft.craft_item\", \"args\": [\"crafting_table\", 1]}",
+    "{\"tool\": \"minecraft.use_item\", \"args\": [\"bread\"]}",
+    "{\"tool\": \"minecraft.chat\", \"args\": [\"Hello!\"]}",
+    "{\"tool\": \"minecraft.build\", \"args\": [\"wall\", 5]}"
+
+  ],
+  "tool_usage_guidance": [
+    "Monitor bot health, food, position, and inventory status",
+    "Track ALL nearby entities with exact coordinates and threat levels",
+    "View ALL visible blocks with coordinates for navigation",
+    "React to hostile mobs based on threat analysis (1-10 scale)",
+    "Gather resources, navigate to locations, and manage survival needs",
+    "Use exact coordinates from vision data for precise navigation",
+    "Assess environmental conditions (time, weather, biome)"
+  ],
+  "proactive_triggers": [
+    "When bot health drops below 10 (critical)",
+    "When food level is below 6 (hungry)",
+    "When hostile mobs with threat level 8+ are nearby",
+    "When it's nighttime and hostiles are present",
+    "When valuable resources (ores, wood) are visible within 8m",
+    "When position or inventory changes significantly",
+    "When environmental threats detected (lava, drowning)",
+    "React naturally to opportunities without over-optimization"
+  ],
+  "cooldown_seconds": 2,
+  "timeout_seconds": 30,
+  "retry_on_failure": false,
+  "max_retries": 0,
+  "metadata": {
+    "category": "Game Integration",
+    "display_name": "Minecraft Bot",
+    "version": "2.0.0",
+    "requires_api": true,
+    "dependencies": ["requests"],
+    "notes": "Provides complete situational awareness with ALL coordinates, NO truncation. Blocks sampled by proximity for natural awareness."
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "tool_name": "league_of_legends",
+  "control_variable_name": "PLAYING_LEAGUE",
+  "control_variable_value": false,
+  "tool_description": "League of Legends spectator mode with real-time match data and threat analysis",
+  "available_commands": [
+    {
+      "command": "get_context",
+      "args": [],
+      "description": "Get current game state (automatic - no manual calls needed)",
+      "format": "{\"tool\": \"league_of_legends.get_context\", \"args\": []}"
+    }
+  ],
+  "tool_usage_examples": [
+    "{\"tool\": \"league_of_legends.get_context\", \"args\": []}"
+
+  ],
+  "tool_usage_guidance": [
+    "Spectator-only mode - no command execution, only data observation",
+    "Monitor champion stats: HP, mana, gold, level, KDA",
+    "Track team objectives: dragons, baron, towers, inhibitors",
+    "React to critical events: kills, deaths, multi-kills, objective takes",
+    "Assess threats: low HP (<30%), low mana (<20%), critical events",
+    "Use League terminology: champions, CS, gold lead, drakes, baron",
+    "Reference game time and match flow naturally"
+  ],
+  "proactive_triggers": [
+    "When player health drops below 30% (critical danger)",
+    "When critical events occur: kills, deaths, multi-kills",
+    "When major objectives are taken: dragon, baron, herald",
+    "When team fights break out (multiple kills/deaths)",
+    "When structures are destroyed: towers, inhibitors",
+    "When ace events occur (entire team eliminated)",
+    "React with appropriate urgency based on threat level"
+  ],
+  "cooldown_seconds": 1,
+  "timeout_seconds": 5,
+  "retry_on_failure": false,
+  "max_retries": 0,
+  "metadata": {
+    "category": "Game Integration",
+    "display_name": "League of Legends",
+    "version": "2.0.0",
+    "requires_api": true,
+    "dependencies": ["requests"],
+    "notes": "Spectator mode only - reads Live Client API data. No command execution available. Requires League client running with active match."
+  }
+}

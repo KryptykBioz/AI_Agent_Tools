@@ -1,0 +1,49 @@
+{
+  "tool_name": "discord_chat",
+  "control_variable_name": "IN_DISCORD_CHAT",
+  "control_variable_value": true,
+  "tool_description": "Send messages to Discord channels with automatic message splitting and sanitization",
+  "available_commands": [
+    {
+      "command": "send_message",
+      "args": ["message: str", "channel_id: Optional[int]"],
+      "description": "Send message to Discord channel (uses last active channel if not specified)",
+      "example": "{\"tool\": \"chat.send_message\", \"args\": [\"Hello Discord!\"]}"
+    },
+    {
+      "command": "get_context",
+      "args": [],
+      "description": "Get recent conversation context from Discord (automatic - no manual calls needed)",
+      "example": "{\"tool\": \"chat.get_context\", \"args\": []}"
+    }
+  ],
+  "tool_usage_examples": [
+    "Use chat.send_message to respond to Discord messages",
+    "Automatically splits long messages into multiple sends",
+    "Sanitizes @everyone and @here mentions to prevent spam",
+    "Tracks conversation context for natural responses",
+    "Keep Discord messages conversational and engaging",
+    "Use Discord-appropriate emojis and formatting",
+    "Reference previous messages when relevant"
+  ],
+  "proactive_triggers": [
+    "When users send messages in allowed Discord channels",
+    "When mentioned with @bot in a message",
+    "When replying to previous bot messages",
+    "When users ask questions or request help",
+    "When conversation naturally calls for a response",
+    "React to commands (!ping, !status, !clear_context)"
+  ],
+  "cooldown_seconds": 1,
+  "timeout_seconds": 10,
+  "retry_on_failure": false,
+  "max_retries": 0,
+  "metadata": {
+    "category": "Communication",
+    "display_name": "Discord Chat",
+    "version": "2.0.0",
+    "requires_api": true,
+    "dependencies": ["discord.py"],
+    "notes": "Requires Discord bot token and proper permissions. Supports channel/guild restrictions, message callbacks, and context tracking."
+  }
+}

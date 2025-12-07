@@ -1,0 +1,49 @@
+{
+  "tool_name": "youtube_chat",
+  "control_variable_name": "IN_YOUTUBE_CHAT",
+  "control_variable_value": false,
+  "tool_description": "Monitor YouTube live chat using direct API calls with continuation tokens",
+  "available_commands": [
+    {
+      "command": "send_message",
+      "args": ["message: str"],
+      "description": "Send message to YouTube live chat (not implemented - YouTube restricts this)",
+      "example": "{\"tool\": \"chat.send_message\", \"args\": [\"Thanks for watching!\"]}"
+    },
+    {
+      "command": "get_context",
+      "args": [],
+      "description": "Get recent chat messages for context (automatic - no manual calls needed)",
+      "example": "{\"tool\": \"chat.get_context\", \"args\": []}"
+    }
+  ],
+  "tool_usage_examples": [
+    "Monitor-only mode - YouTube does not allow bot message sending via API",
+    "Automatically fetches live chat using continuation tokens",
+    "Tracks conversation context (last 10 messages by default)",
+    "Responds based on viewer chat messages and comments",
+    "Keep responses YouTube-appropriate and community-friendly",
+    "Reference stream content and viewer questions naturally",
+    "Use enthusiastic, engaging tone for YouTube audience"
+  ],
+  "proactive_triggers": [
+    "When viewers send messages in YouTube live chat",
+    "When viewers ask questions or make comments",
+    "When chat activity picks up during stream events",
+    "When viewers reference specific stream moments",
+    "When conversation naturally calls for engagement",
+    "React to Super Chats, memberships, and special events"
+  ],
+  "cooldown_seconds": 2,
+  "timeout_seconds": 10,
+  "retry_on_failure": false,
+  "max_retries": 0,
+  "metadata": {
+    "category": "Communication",
+    "display_name": "YouTube Chat",
+    "version": "2.0.0",
+    "requires_api": true,
+    "dependencies": ["requests"],
+    "notes": "Monitor-only mode using YouTube's internal API with continuation tokens. Requires video ID of active live stream. Does NOT support sending messages (YouTube API restriction)."
+  }
+}

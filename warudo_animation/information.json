@@ -1,0 +1,40 @@
+{
+  "tool_name": "warudo",
+  "control_variable_name": "USE_WARUDO_ANIMATION",
+  "control_variable_value": true,
+  "tool_description": "Control avatar animations and emotions using Warudo commands",
+  "available_commands": [
+    {
+      "command": "emotion",
+      "args": ["emotion_name: str"],
+      "description": "Set animated avatar character emotion/expression",
+      "format": "{\"tool\": \"warudo.emotion\", \"args\": [\"happy\"]}"
+    },
+    {
+      "command": "animation",
+      "args": ["animation_name: str"],
+      "description": "Play animated avatar character animation",
+      "format": "{\"tool\": \"warudo.animation\", \"args\": [\"wave\"]}"
+    }
+  ],
+  "tool_usage_examples": [
+    "{\"tool\": \"warudo.animation\", \"args\": [\"wave\"]}",
+    "{\"tool\": \"warudo.animation\", \"args\": [\"scare\"]}",
+    "{\"tool\": \"warudo.animation\", \"args\": [\"swing\"]}",
+    "{\"tool\": \"warudo.emotion\", \"args\": [\"happy\"]}",
+    "{\"tool\": \"warudo.emotion\", \"args\": [\"angry\"]}"
+  ],
+  "tool_usage_guidance": [
+    "Use emotions to express feelings.",
+    "Available emotions: happy, angry, sad, surprised, relaxed",
+    "Use animations for actions.",
+    "Available animations: nod, laugh, shrug, upset, wave, cat, confused, shy, swing, stretch, yay, taunt, bow, scare, refuse, snap",
+    "Emotions and animations execute with 10 second cooldown",
+    "Use emotions and animations that match the current tone and situation.",
+    "Use at least one emotion or animation with each response."
+  ],
+  "cooldown_seconds": 10,
+  "timeout_seconds": 5,
+  "retry_on_failure": false,
+  "max_retries": 0
+}

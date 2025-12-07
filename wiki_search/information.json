@@ -1,0 +1,47 @@
+{
+  "tool_name": "wiki_search",
+  "control_variable_name": "USE_WIKI_SEARCH",
+  "control_variable_value": false,
+  "tool_description": "Wikipedia search for factual, encyclopedic information with position-tracking for varied results",
+  "available_commands": [
+    {
+      "command": "search",
+      "args": ["query: str", "max_results: Optional[int]"],
+      "description": "Alias for query command - search Wikipedia",
+      "format": "{\"tool\": \"wiki_search.search\", \"args\": [\"Minecraft\"]}"
+    }
+  ],
+    "tool_usage_examples": [
+    "{\"tool\": \"wiki_search.search\", \"args\": [\"Legaue of Legends\"]}",
+    "{\"tool\": \"wiki_search.search\", \"args\": [\"VTubers\"]}",
+    "{\"tool\": \"wiki_search.search\", \"args\": [\"Neuro-sama\"]}",
+    "{\"tool\": \"wiki_search.search\", \"args\": [\"Ironmouse\"]}",
+    "{\"tool\": \"wiki_search.search\", \"args\": [\"Anime\"]}"
+  ],
+  "tool_usage_guidance": [
+    "Use wiki_search for factual, encyclopedic information from Wikipedia",
+    "Search queries should be concise (1-3 words for best results)",
+    "Repeated searches on the same topic will return different content sections",
+    "Great for definitions, historical facts, scientific concepts, and biographical info",
+    "Returns contextual chunks containing query terms with smart positioning"
+  ],
+  "proactive_triggers": [
+    "When you're uncertain about facts or definitions",
+    "When you need historical or scientific information",
+    "When the user asks 'what is X' or 'who is X'",
+    "When your thoughts show curiosity about a topic",
+    "When you need to verify information before responding"
+  ],
+  "cooldown_seconds": 3,
+  "timeout_seconds": 20,
+  "retry_on_failure": false,
+  "max_retries": 0,
+  "metadata": {
+    "category": "Information Retrieval",
+    "display_name": "Wikipedia Search",
+    "version": "2.0.0",
+    "requires_api": false,
+    "dependencies": ["requests"],
+    "notes": "Position-tracking ensures varied results on repeated queries."
+  }
+}

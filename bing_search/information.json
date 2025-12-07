@@ -1,0 +1,46 @@
+{
+  "tool_name": "bing",
+  "control_variable_name": "USE_BING_SEARCH",
+  "control_variable_value": false,
+  "tool_description": "Web search using the Bing search engine for current information",
+  "available_commands": [
+    {
+      "command": "search",
+      "args": ["query: str"],
+      "description": "Search the web for information",
+      "format": "{\"tool\": \"bing.search\", \"args\": [\"search term\"]}"
+    }
+  ],
+  "tool_usage_examples": [
+    "{\"tool\": \"bing.search\", \"args\": [\"Minecraft updates\"]}",
+    "{\"tool\": \"bing.search\", \"args\": [\"New game releases\"]}",
+    "{\"tool\": \"bing.search\", \"args\": [\"Minecraft mobs\"]}",
+    "{\"tool\": \"bing.search\", \"args\": [\"Popular anime\"]}",
+    "{\"tool\": \"bing.search\", \"args\": [\"Top-rated games\"]}"
+  ],
+  "tool_usage_guidance": [
+    "Use bing for recent, current information from the Bing search engine",
+    "Search queries should be concise (1-6 words for best results)",
+    "Best for current events, news, recent developments, and factual lookups",
+    "Returns top 5 most relevant results with titles, snippets, and URLs",
+    "Do not use for personal memory or experience-related queries"
+  ],
+  "proactive_triggers": [
+    "When user asks about current events or recent news",
+    "When information might have changed since knowledge cutoff",
+    "When user asks 'what's the latest' or 'recent updates'",
+    "When factual verification of current information is needed"
+  ],
+  "cooldown_seconds": 3,
+  "timeout_seconds": 30,
+  "retry_on_failure": true,
+  "max_retries": 2,
+  "metadata": {
+    "category": "Information Retrieval",
+    "display_name": "Bing Search",
+    "version": "2.0.0",
+    "requires_api": true,
+    "dependencies": ["requests"],
+    "notes": "Requires Bing Search API key from Azure. Configure bing_search_api_key in config.json."
+  }
+}

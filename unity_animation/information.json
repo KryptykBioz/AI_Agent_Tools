@@ -1,0 +1,56 @@
+{
+  "tool_name": "unity",
+  "control_variable_name": "USE_UNITY_ANIMATION",
+  "control_variable_value": false,
+  "tool_description": "Control Unity VRM character animations and emotions via WebSocket",
+  "available_commands": [
+    {
+      "command": "emotion",
+      "args": ["emotion_name: str", "intensity: Optional[float]"],
+      "description": "Set character emotion/expression",
+      "format": "{\"tool\": \"unity.emotion\", \"args\": [\"happy\", 0.8]}"
+    },
+    {
+      "command": "animation",
+      "args": ["animation_name: str", "intensity: Optional[float]"],
+      "description": "Play character animation",
+      "format": "{\"tool\": \"unity.animation\", \"args\": [\"wave\", 0.7]}"
+    }
+  ],
+    "tool_usage_examples": [
+    "{\"tool\": \"unity.animation\", \"args\": [\"wave\"]}",
+    "{\"tool\": \"unity.animation\", \"args\": [\"scare\"]}",
+    "{\"tool\": \"unity.animation\", \"args\": [\"swing\"]}",
+    "{\"tool\": \"unity.emotion\", \"args\": [\"happy\"]}",
+    "{\"tool\": \"unity.emotion\", \"args\": [\"angry\"]}"
+  ],
+  "tool_usage_guidance": [
+    "Use emotions to express feelings.",
+    "Available emotions: happy, angry, sad, surprised, relaxed",
+    "Use animations for actions.",
+    "Available animations: nod, laugh, shrug, upset, wave, cat, confused, shy, swing, stretch, yay, taunt, bow, scare, refuse, snap",
+    "Emotions and animations execute with 10 second cooldown",
+    "Use emotions and animations frequently.",
+    "Use emotions and animations that match the current tone and situation.",
+    "Intensity ranges from 0.0 (subtle) to 1.0 (full)"
+  ],
+  "proactive_triggers": [
+    "When expressing emotions in conversation",
+    "When greeting or acknowledging user",
+    "When celebrating achievements",
+    "When showing confusion or thinking",
+    "When appropriate to physical context"
+  ],
+  "cooldown_seconds": 10,
+  "timeout_seconds": 5,
+  "retry_on_failure": false,
+  "max_retries": 0,
+  "metadata": {
+    "category": "Avatar Control",
+    "display_name": "Unity VRM Animation",
+    "version": "2.0.0",
+    "requires_api": false,
+    "dependencies": ["websockets"],
+    "notes": "Requires Unity with VRMAgentWebSocket component. Refactored to modern architecture."
+  }
+}
