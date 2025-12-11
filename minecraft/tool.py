@@ -183,19 +183,19 @@ class MinecraftTool(BaseTool):
                         food = vision.get('food', 20)
                         hostile_count = len([e for e in vision.get('entitiesInSight', []) if e.get('isHostile')])
                         
-                        # Calculate urgency level
-                        urgency = self._calculate_urgency(health, food, hostile_count)
+                        # Calculate priority level (using Priority string constants)
+                        priority = self._calculate_priority(health, food, hostile_count)
                         
-                        # Inject formatted context into thought buffer
+                        # Use priority_override instead of urgency_override
                         thought_buffer.add_processed_thought(
                             content=context,
                             source='minecraft_state',
-                            urgency_override=urgency
+                            priority_override=priority  # Correct parameter name
                         )
                         
                         if self._logger:
                             self._logger.tool(
-                                f"[Minecraft] Injected game state (urgency: {urgency}, "
+                                f"[Minecraft] Injected game state (priority: {priority}, "
                                 f"health: {health}, food: {food}, hostiles: {hostile_count})"
                             )
                         
@@ -225,9 +225,9 @@ class MinecraftTool(BaseTool):
         if self._logger:
             self._logger.system("[Minecraft] Context loop stopped")
     
-    def _calculate_urgency(self, health: int, food: int, hostile_count: int) -> int:
+    def _calculate_priority(self, health: int, food: int, hostile_count: int) -> str:
         """
-        Calculate urgency level for context injection
+        Calculate priority level for context injection using Priority string constants
         
         Args:
             health: Current health (0-20)
@@ -235,29 +235,36 @@ class MinecraftTool(BaseTool):
             hostile_count: Number of nearby hostile mobs
             
         Returns:
-            Urgency level (1-10)
+            Priority level string: "[LOW]", "[MEDIUM]", "[HIGH]", or "[CRITICAL]"
         """
-        urgency = 5  # Default baseline
+        from BASE.core.thought_buffer import Priority
         
-        # Critical health
+        # Critical health - CRITICAL priority
         if health < 6:
-            urgency = 10
-        elif health < 10:
-            urgency = 8
+            return Priority.CRITICAL
         
-        # Low food
+        # Low food - CRITICAL priority
         if food < 4:
-            urgency = max(urgency, 9)
-        elif food < 6:
-            urgency = max(urgency, 7)
+            return Priority.CRITICAL
         
-        # Hostile threats
+        # Multiple hostiles - CRITICAL priority
         if hostile_count >= 3:
-            urgency = max(urgency, 9)
-        elif hostile_count >= 1:
-            urgency = max(urgency, 7)
+            return Priority.CRITICAL
         
-        return urgency
+        # Moderate health issues - HIGH priority
+        if health < 10:
+            return Priority.HIGH
+        
+        # Low food warning - HIGH priority
+        if food < 6:
+            return Priority.HIGH
+        
+        # Single hostile nearby - HIGH priority
+        if hostile_count >= 1:
+            return Priority.HIGH
+        
+        # Default - MEDIUM priority (game state is always somewhat relevant)
+        return Priority.MEDIUM
     
     async def execute(self, command: str, args: List[Any]) -> Dict[str, Any]:
         """

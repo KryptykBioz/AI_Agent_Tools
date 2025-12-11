@@ -1,4 +1,4 @@
-# Filename: BASE/tools/installed/warudo_animation/animate_avatar.py
+# Filename: BASE/tools/installed/warudo/animate_avatar.py
 """
 Warudo Avatar Animation Script
 Key optimizations:
@@ -154,12 +154,13 @@ class WarudoManager:
                  auto_connect: bool = True, timeout: float = 5.0, gui_logger=None):
         self.enabled = True
         
-        # self.logger = Logger(
-        #     name="Warudo",
-        #     enable_timestamps=True,
-        #     enable_console=False,
-        #     gui_callback=gui_logger
-        # )
+        self.logger = Logger(
+            name="Warudo",
+            enable_timestamps=True,
+            enable_console=False,
+            gui_callback=gui_logger,
+            config=config
+        )
         
         self.controller = WarudoWebSocketController(websocket_url)
         

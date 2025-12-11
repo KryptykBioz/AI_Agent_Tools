@@ -205,15 +205,15 @@ async function checkOllamaAvailability() {
     );
     
     if (!modelExists) {
-      console.warn(`⚠️  Model '${OLLAMA_MODEL}' not found`);
+      console.warn(`[WARNING] Model '${OLLAMA_MODEL}' not found`);
       return false;
     }
     
-    console.log(`✅ Ollama ready (${OLLAMA_HOST}, model: ${OLLAMA_MODEL})`);
+    console.log(`[SUCCESS] Ollama ready (${OLLAMA_HOST}, model: ${OLLAMA_MODEL})`);
     return true;
     
   } catch (err) {
-    console.warn('⚠️  Ollama unavailable:', err.message);
+    console.warn('[WARNING] Ollama unavailable:', err.message);
     return false;
   }
 }

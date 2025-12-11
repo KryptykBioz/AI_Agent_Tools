@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const { createBot, initializeBot, getBotName } = require('./bot');
+const { createBot, initializeBot, getagentname } = require('./bot');
 const { handleAction } = require('./bot-actions');
 const { getVisionData } = require('./world-info');
 const fs = require("fs");
@@ -20,10 +20,10 @@ function checkMemoryUsage() {
     console.error(`   Heap: ${Math.round(usage.heapUsed / 1024 / 1024)}MB / ${Math.round(usage.heapTotal / 1024 / 1024)}MB`);
     
     if (global.gc) {
-      console.log('⚠️  Forcing garbage collection...');
+      console.log('[WARNING] Forcing garbage collection...');
       global.gc();
     } else {
-      console.log('⚠️  Run with --expose-gc flag to enable forced garbage collection');
+      console.log('[WARNING] Run with --expose-gc flag to enable forced garbage collection');
     }
     
     memoryWarningCount++;
@@ -32,7 +32,7 @@ function checkMemoryUsage() {
       console.error('💥 Memory critically high for extended period. Consider restarting.');
     }
   } else if (heapUsedPercent > MEMORY_WARNING_THRESHOLD) {
-    console.warn(`⚠️  Memory usage at ${(heapUsedPercent * 100).toFixed(1)}%`);
+    console.warn(`[WARNING] Memory usage at ${(heapUsedPercent * 100).toFixed(1)}%`);
     memoryWarningCount++;
   } else {
     memoryWarningCount = 0;
@@ -66,35 +66,35 @@ function findProjectRoot(startDir = __dirname) {
     currentDir = parentDir;
   }
   
-  console.warn("⚠️ Could not find project root (looking for personality/ directory)");
+  console.warn("[WARNING]️ Could not find project root (looking for personality/ directory)");
   return null;
 }
 
 // Read bot name from config
-function getBotNameFromConfig() {
+function getagentnameFromConfig() {
   const projectRoot = findProjectRoot();
   
   if (!projectRoot) {
-    console.warn("⚠️ Could not find project root directory (Anna_AI/)");
+    console.warn("[WARNING]️ Could not find project root directory (Anna_AI/)");
     return null;
   }
   
-  const configPath = path.join(projectRoot, "personality", "bot_info.py");
+  const configPath = path.join(projectRoot, "personality", "agent_info.py");
   
   try {
     if (fs.existsSync(configPath)) {
       const content = fs.readFileSync(configPath, "utf8");
-      const match = content.match(/botname\s*=\s*["']([^"']+)["']/);
+      const match = content.match(/agentname\s*=\s*["']([^"']+)["']/);
       if (match && match[1]) {
-        console.log(`✅ Bot name loaded from config: ${match[1]}`);
+        console.log(`[SUCCESS] Bot name loaded from config: ${match[1]}`);
         console.log(`   Config path: ${configPath}`);
         return match[1];
       }
     } else {
-      console.warn(`⚠️ Config file not found at: ${configPath}`);
+      console.warn(`[WARNING]️ Config file not found at: ${configPath}`);
     }
   } catch (err) {
-    console.warn("⚠️ Could not read bot name from bot_info.py:", err.message);
+    console.warn("[WARNING]️ Could not read bot name from agent_info.py:", err.message);
   }
   
   return null;
@@ -103,11 +103,11 @@ function getBotNameFromConfig() {
 // Environment variables
 const LISTEN_PORT = parseInt(process.env.LISTEN_PORT || "3001", 10);
 const API_KEY = process.env.API_KEY || null;
-const BOT_NAME = process.env.BOT_NAME || getBotNameFromConfig() || "MinecraftBot";
+const BOT_NAME = process.env.BOT_NAME || getagentnameFromConfig() || "MinecraftBot";
 
 // Validate bot name
 if (!BOT_NAME || BOT_NAME === "null" || BOT_NAME.trim() === "") {
-  console.error("❌ Invalid bot name! Please set botname in bot_info.py or BOT_NAME environment variable");
+  console.error("[FAILED] Invalid bot name! Please set agentname in agent_info.py or BOT_NAME environment variable");
   process.exit(1);
 }
 
@@ -152,7 +152,7 @@ async function initializeBotWithRetry(maxRetries = 3) {
             clearTimeout(timeout);
             botInitialized = true;
             lastError = null;
-            console.log("✅ Bot initialized successfully");
+            console.log("[SUCCESS] Bot initialized successfully");
             resolve();
           }, 2000);
         });
@@ -167,7 +167,7 @@ async function initializeBotWithRetry(maxRetries = 3) {
       break;
       
     } catch (err) {
-      console.error(`❌ Bot initialization attempt ${attempt} failed:`, err.message);
+      console.error(`[FAILED] Bot initialization attempt ${attempt} failed:`, err.message);
       lastError = err;
       botInitialized = false;
       
@@ -241,7 +241,7 @@ app.get("/api/vision", (req, res) => {
       status: "success",
       vision: visionData
     });
-    console.log("✅ Sent vision data");
+    console.log("[SUCCESS] Sent vision data");
     
   } catch (err) {
     console.error("[Vision] Error:", err);
@@ -346,7 +346,7 @@ app.get("/api/status", (req, res) => {
     serverInfo: {
       host: process.env.MC_HOST || "localhost",
       port: parseInt(process.env.MC_PORT || "63968", 10),
-      botName: BOT_NAME,
+      agentname: BOT_NAME,
     },
     
     lastError: lastError ? lastError.message : null,

@@ -1,7 +1,7 @@
 {
   "tool_name": "warudo",
   "control_variable_name": "USE_WARUDO_ANIMATION",
-  "control_variable_value": true,
+  "control_variable_value": false,
   "tool_description": "Control avatar animations and emotions using Warudo commands",
   "available_commands": [
     {
@@ -36,5 +36,15 @@
   "cooldown_seconds": 10,
   "timeout_seconds": 5,
   "retry_on_failure": false,
-  "max_retries": 0
+  "max_retries": 0,
+  "metadata": {
+    "category": "Animation Control",
+    "display_name": "Warudo Animation",
+    "gui_label": "Warudo",
+    "gui_icon": "",
+    "version": "2.0.0",
+    "requires_api": true,
+    "dependencies": ["requests"],
+    "notes": "Control avatar animations and emotions using Warudo commands."
+  }
 }

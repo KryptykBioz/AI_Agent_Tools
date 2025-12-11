@@ -41,9 +41,11 @@
   "metadata": {
     "category": "Communication",
     "display_name": "Discord Chat",
+    "gui_label": "Discord",
+    "gui_icon": "",
     "version": "2.0.0",
     "requires_api": true,
     "dependencies": ["discord.py"],
-    "notes": "Requires Discord bot token and proper permissions. Supports channel/guild restrictions, message callbacks, and context tracking."
+    "notes": "Requires Discord bot token and proper permissions. Supports channel/guild restrictions, message callbacks, and context tracking. GUI component provides full configuration and monitoring."
   }
 }

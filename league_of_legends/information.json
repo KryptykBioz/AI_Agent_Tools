@@ -40,6 +40,8 @@
   "metadata": {
     "category": "Game Integration",
     "display_name": "League of Legends",
+    "gui_label": "League of Legends",
+    "gui_icon": "",
     "version": "2.0.0",
     "requires_api": true,
     "dependencies": ["requests"],

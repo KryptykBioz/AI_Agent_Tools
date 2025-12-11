@@ -48,6 +48,8 @@
   "metadata": {
     "category": "Avatar Control",
     "display_name": "Unity VRM Animation",
+    "gui_label": "Unity",
+    "gui_icon": "",
     "version": "2.0.0",
     "requires_api": false,
     "dependencies": ["websockets"],

@@ -63,6 +63,8 @@
   "metadata": {
     "category": "Productivity",
     "display_name": "Reminders & Timers",
+    "gui_label": "Reminders",
+    "gui_icon": "",
     "version": "3.0.0",
     "requires_api": false,
     "dependencies": [],

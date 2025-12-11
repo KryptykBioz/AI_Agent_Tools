@@ -426,7 +426,7 @@ class TwitchChatTool(BaseTool):
         if not hasattr(self, '_thought_buffer') or not self._thought_buffer:
             if self._logger:
                 self._logger.error(
-                    "[Twitch] ✗ CRITICAL: No thought buffer at initialization time. "
+                    "[Twitch] CRITICAL: No thought buffer at initialization time. "
                     "Batch processing will not work!"
                 )
             return False
@@ -481,8 +481,8 @@ class TwitchChatTool(BaseTool):
         
         # Format batch
         formatted_lines = []
-        from personality.bot_info import botname
-        bot_name_lower = botname.lower()
+        from personality.bot_info import agentname
+        bot_name_lower = agentname.lower()
         has_bot_mention = False
         
         for msg in messages:
@@ -531,7 +531,7 @@ class TwitchChatTool(BaseTool):
         if self.enable_batching and not self._thought_buffer:
             if self._logger:
                 self._logger.error(
-                    "[Twitch] ✗ Cannot start with batching: No thought buffer. "
+                    "[Twitch] Cannot start with batching: No thought buffer. "
                     "Disable batching or ensure thought buffer is injected."
                 )
             return False

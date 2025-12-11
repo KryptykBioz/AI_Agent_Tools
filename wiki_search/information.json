@@ -39,6 +39,8 @@
   "metadata": {
     "category": "Information Retrieval",
     "display_name": "Wikipedia Search",
+    "gui_label": "Wikipedia",
+    "gui_icon": "",
     "version": "2.0.0",
     "requires_api": false,
     "dependencies": ["requests"],

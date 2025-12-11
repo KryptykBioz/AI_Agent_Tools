@@ -228,7 +228,7 @@ class DiscordChatTool(BaseTool):
                 embed.add_field(name="Uptime", value=f"{hours:.1f} hours")
             
             embed.add_field(name="Guilds", value=status_data['guilds'])
-            embed.add_field(name="Connected", value="✅" if status_data['connected'] else "❌")
+            embed.add_field(name="Connected", value="[SUCCESS]" if status_data['connected'] else "[FAILED]")
             
             await ctx.send(embed=embed)
             if self._logger:
@@ -238,7 +238,7 @@ class DiscordChatTool(BaseTool):
         async def clear_context(ctx):
             """Clear conversation context"""
             self.context_buffer.clear()
-            await ctx.send("✅ Context cleared!")
+            await ctx.send("[SUCCESS] Context cleared!")
             if self._logger:
                 self._logger.tool(f"[Discord] Context cleared")
     

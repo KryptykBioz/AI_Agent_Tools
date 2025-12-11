@@ -1,11 +1,11 @@
-# Filename: BASE/tools/installed/warudo_animation/tool.py
+# Filename: BASE/tools/installed/warudo/tool.py
 """
 Warudo Animation Tool - Simplified Architecture
 Single master class for controlling Warudo avatar animations and emotions
 """
 from typing import List, Dict, Any
 from BASE.handlers.base_tool import BaseTool
-from BASE.tools.installed.warudo_animation.animate_avatar import WarudoManager
+from BASE.tools.installed.warudo.animate_avatar import WarudoManager
 
 
 class WarudoAnimationTool(BaseTool):

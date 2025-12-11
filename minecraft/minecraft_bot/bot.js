@@ -26,49 +26,49 @@ function findProjectRoot(startDir = __dirname) {
     currentDir = parentDir;
   }
   
-  console.warn("⚠️ Could not find project root (looking for personality/ directory)");
+  console.warn("[WARNING]️ Could not find project root (looking for personality/ directory)");
   return null;
 }
 
-// Function to read bot name from bot_info.py
-function getBotNameFromConfig() {
+// Function to read bot name from agent_info.py
+function getagentnameFromConfig() {
   // Find project root
   const projectRoot = findProjectRoot();
   
   if (!projectRoot) {
-    console.warn("⚠️ Could not find project root directory (Anna_AI/)");
+    console.warn("[WARNING]️ Could not find project root directory (Anna_AI/)");
     return null;
   }
   
   // Config path relative to project root
-  const configPath = path.join(projectRoot, "personality", "bot_info.py");
+  const configPath = path.join(projectRoot, "personality", "agent_info.py");
   
   try {
     if (fs.existsSync(configPath)) {
       const content = fs.readFileSync(configPath, "utf8");
-      const match = content.match(/botname\s*=\s*["']([^"']+)["']/);
+      const match = content.match(/agentname\s*=\s*["']([^"']+)["']/);
       if (match && match[1]) {
-        console.log(`✅ Bot name loaded from config: ${match[1]}`);
+        console.log(`[SUCCESS] Bot name loaded from config: ${match[1]}`);
         console.log(`   Config path: ${configPath}`);
         return match[1];
       }
     } else {
-      console.warn(`⚠️ Config file not found at: ${configPath}`);
+      console.warn(`[WARNING]️ Config file not found at: ${configPath}`);
     }
   } catch (err) {
-    console.warn("⚠️ Could not read bot name from bot_info.py:", err.message);
+    console.warn("[WARNING]️ Could not read bot name from agent_info.py:", err.message);
   }
   
   return null;
 }
 
 // Function to get bot name (called when needed, not at module load time)
-function getBotName() {
-  const name = process.env.BOT_NAME || getBotNameFromConfig() || "MinecraftBot";
+function getagentname() {
+  const name = process.env.BOT_NAME || getagentnameFromConfig() || "MinecraftBot";
   
   // Validate bot name
   if (!name || name === "null" || name.trim() === "") {
-    console.error("❌ Invalid bot name! Please set botname in bot_info.py or BOT_NAME environment variable");
+    console.error("[FAILED] Invalid bot name! Please set agentname in agent_info.py or BOT_NAME environment variable");
     process.exit(1);
   }
   
@@ -86,20 +86,20 @@ let minecraftDataExplicit = null;
 
 try {
   minecraftDataFunc = require("minecraft-data");
-  console.log("✅ minecraft-data module loaded successfully");
+  console.log("[SUCCESS] minecraft-data module loaded successfully");
 
   try {
     minecraftDataExplicit = minecraftDataFunc(MC_DATA_VERSION);
-    console.log(`✅ Pre-loaded minecraft-data for version ${MC_DATA_VERSION}`);
+    console.log(`[SUCCESS] Pre-loaded minecraft-data for version ${MC_DATA_VERSION}`);
   } catch (err) {
     console.warn(
-      `⚠️ Could not pre-load minecraft-data for ${MC_DATA_VERSION}:`,
+      `[WARNING]️ Could not pre-load minecraft-data for ${MC_DATA_VERSION}:`,
       err.message
     );
     minecraftDataExplicit = null;
   }
 } catch (err) {
-  console.error("❌ Failed to load minecraft-data module:", err.message);
+  console.error("[FAILED] Failed to load minecraft-data module:", err.message);
   minecraftDataFunc = null;
   minecraftDataExplicit = null;
 }
@@ -107,7 +107,7 @@ try {
 // Better mcData initialization with proper attachment
 function initializeMcData(bot) {
   if (!minecraftDataFunc) {
-    console.warn("⚠️ minecraft-data function not available");
+    console.warn("[WARNING]️ minecraft-data function not available");
     return null;
   }
 
@@ -117,10 +117,10 @@ function initializeMcData(bot) {
   if (bot.version) {
     try {
       data = minecraftDataFunc(bot.version);
-      console.log(`✅ Loaded minecraft-data for bot version: ${bot.version}`);
+      console.log(`[SUCCESS] Loaded minecraft-data for bot version: ${bot.version}`);
     } catch (err) {
       console.warn(
-        `⚠️ Failed to load minecraft-data for bot version ${bot.version}:`,
+        `[WARNING]️ Failed to load minecraft-data for bot version ${bot.version}:`,
         err.message
       );
     }
@@ -130,9 +130,9 @@ function initializeMcData(bot) {
   if (!data && minecraftDataExplicit) {
     try {
       data = minecraftDataExplicit;
-      console.log(`✅ Using pre-loaded minecraft-data version: ${MC_DATA_VERSION}`);
+      console.log(`[SUCCESS] Using pre-loaded minecraft-data version: ${MC_DATA_VERSION}`);
     } catch (err) {
-      console.warn("⚠️ Failed to use pre-loaded minecraft-data:", err.message);
+      console.warn("[WARNING]️ Failed to use pre-loaded minecraft-data:", err.message);
     }
   }
 
@@ -140,7 +140,7 @@ function initializeMcData(bot) {
   if (data) {
     try {
       bot.mcData = data;
-      console.log(`✅ Attached mcData to bot object`);
+      console.log(`[SUCCESS] Attached mcData to bot object`);
       console.log(`  - Version: ${data.version || 'unknown'}`);
       console.log(
         `  - Blocks: ${data.blocks ? Object.keys(data.blocks).length : 0}`
@@ -151,7 +151,7 @@ function initializeMcData(bot) {
       console.log(`  - blocksByName available: ${!!data.blocksByName}`);
       console.log(`  - itemsByName available: ${!!data.itemsByName}`);
     } catch (err) {
-      console.error("❌ Failed to attach mcData to bot:", err.message);
+      console.error("[FAILED] Failed to attach mcData to bot:", err.message);
     }
   }
 
@@ -165,7 +165,7 @@ function loadPlugins(bot, mcData) {
   // Validate mcData before loading plugins
   if (!mcData || !mcData.blocksByName) {
     console.error(
-      "❌ Cannot load plugins: mcData or blocksByName not available"
+      "[FAILED] Cannot load plugins: mcData or blocksByName not available"
     );
     return false;
   }
@@ -174,52 +174,52 @@ function loadPlugins(bot, mcData) {
   try {
     if (pathfinderModule && typeof pathfinderModule.pathfinder === "function") {
       bot.loadPlugin(pathfinderModule.pathfinder);
-      console.log("✅ Pathfinder plugin loaded successfully");
+      console.log("[SUCCESS] Pathfinder plugin loaded successfully");
       loadedCount++;
     } else if (typeof pathfinderModule === "function") {
       bot.loadPlugin(pathfinderModule);
-      console.log("✅ Pathfinder plugin (direct) loaded successfully");
+      console.log("[SUCCESS] Pathfinder plugin (direct) loaded successfully");
       loadedCount++;
     } else if (pathfinderModule && pathfinderModule.Movements && pathfinderModule.goals) {
       // Alternative loading method for some pathfinder versions
       bot.pathfinder = pathfinderModule;
-      console.log("✅ Pathfinder plugin (manual) loaded successfully");
+      console.log("[SUCCESS] Pathfinder plugin (manual) loaded successfully");
       loadedCount++;
     } else {
-      console.warn("⚠️ Pathfinder plugin not found or invalid format");
+      console.warn("[WARNING]️ Pathfinder plugin not found or invalid format");
     }
   } catch (err) {
-    console.error("❌ Failed to load pathfinder plugin:", err.message);
+    console.error("[FAILED] Failed to load pathfinder plugin:", err.message);
   }
 
   // Load collectblock
   try {
     if (typeof collectBlockPlugin === "function") {
       bot.loadPlugin(collectBlockPlugin);
-      console.log("✅ Collectblock plugin loaded successfully");
+      console.log("[SUCCESS] Collectblock plugin loaded successfully");
       loadedCount++;
     } else {
-      console.warn("⚠️ Collectblock plugin not found or invalid format");
+      console.warn("[WARNING]️ Collectblock plugin not found or invalid format");
     }
   } catch (err) {
-    console.error("❌ Failed to load collectblock plugin:", err.message);
+    console.error("[FAILED] Failed to load collectblock plugin:", err.message);
   }
 
   const success = loadedCount > 0;
   console.log(
-    `${success ? "✅" : "❌"} Loaded ${loadedCount} plugins successfully`
+    `${success ? "[SUCCESS]" : "[FAILED]"} Loaded ${loadedCount} plugins successfully`
   );
   return success;
 }
 
 // Create bot function
 function createBot() {
-  const botName = getBotName(); // Get bot name when creating bot, not at module load
+  const agentname = getagentname(); // Get bot name when creating bot, not at module load
   
   const botOptions = {
     host: SERVER_HOST,
     port: SERVER_PORT,
-    username: botName,
+    username: agentname,
   };
   
   // Version override options
@@ -245,7 +245,7 @@ function createBot() {
   bot.pluginsLoaded = false;
   bot.botReady = false;
   bot.mcData = null;
-  bot.botName = botName; // Store bot name on the bot instance
+  bot.agentname = agentname; // Store bot name on the bot instance
   
   return bot;
 }
@@ -262,7 +262,7 @@ function initializeBot(bot) {
     // Add a short delay to ensure bot.version is fully synced
     setTimeout(() => {
       if (mcData && mcData.blocksByName) {
-        console.log("✅ mcData initialized successfully with blocksByName");
+        console.log("[SUCCESS] mcData initialized successfully with blocksByName");
 
         // Load plugins after mcData is confirmed working
         try {
@@ -271,17 +271,17 @@ function initializeBot(bot) {
             console.log("🎉 Bot is ready with all systems operational!");
             bot.botReady = true;
           } else {
-            console.warn("⚠️ Bot is ready but some plugins failed to load");
+            console.warn("[WARNING]️ Bot is ready but some plugins failed to load");
             bot.botReady = true; // Still mark as ready for basic functionality
           }
         } catch (err) {
-          console.error("❌ Error during plugin loading:", err.message);
+          console.error("[FAILED] Error during plugin loading:", err.message);
           bot.pluginsLoaded = false;
           bot.botReady = true; // Mark ready for basic functionality
         }
       } else {
         console.error(
-          "❌ Failed to initialize mcData properly - limited functionality"
+          "[FAILED] Failed to initialize mcData properly - limited functionality"
         );
         console.warn("    - mcData availability:", !!mcData);
         if (mcData) {
@@ -296,7 +296,7 @@ function initializeBot(bot) {
 
   // Bot event handlers with better logging
   bot.on("login", () => {
-    console.log(`✅ Bot logged in as ${bot.botName || bot.username}`);
+    console.log(`[SUCCESS] Bot logged in as ${bot.agentname || bot.username}`);
     console.log(`🌍 Server: ${SERVER_HOST}:${SERVER_PORT}`);
     if (bot.version) {
       console.log(`🎮 Minecraft version: ${bot.version}`);
@@ -331,7 +331,7 @@ function initializeBot(bot) {
   // Health and status monitoring
   bot.on("health", () => {
     if (bot.health <= 5) {
-      console.warn(`⚠️ Low health: ${bot.health}/20`);
+      console.warn(`[WARNING]️ Low health: ${bot.health}/20`);
     }
   });
 
@@ -351,7 +351,7 @@ function currentMcData(bot) {
       if (bot) bot.mcData = data;
       return data;
     } catch (e) {
-      console.warn("⚠️ Failed to get mcData from bot version:", e.message);
+      console.warn("[WARNING]️ Failed to get mcData from bot version:", e.message);
     }
   }
   
@@ -369,5 +369,5 @@ module.exports = {
   currentMcData,
   isBotReady,
   pathfinderModule,
-  getBotName // Export the function so server.js can use it
+  getagentname // Export the function so server.js can use it
 };

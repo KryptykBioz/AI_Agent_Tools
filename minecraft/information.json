@@ -104,6 +104,8 @@
   "metadata": {
     "category": "Game Integration",
     "display_name": "Minecraft Bot",
+    "gui_label": "Minecraft",
+    "gui_icon": "",
     "version": "2.0.0",
     "requires_api": true,
     "dependencies": ["requests"],
