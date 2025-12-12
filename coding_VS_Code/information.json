@@ -68,6 +68,8 @@
   "metadata": {
     "category": "Development",
     "display_name": "VS Code Integration",
+    "gui_label": "VS Code",
+    "gui_icon": "",
     "version": "2.0.0",
     "requires_api": false,
     "dependencies": ["requests"],

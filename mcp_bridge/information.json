@@ -1,0 +1,102 @@
+{
+  "tool_name": "mcp_bridge",
+  "control_variable_name": "USE_MCP_BRIDGE",
+  "control_variable_value": false,
+  "tool_description": "Bridge to Model Context Protocol servers enabling dynamic tool discovery and execution",
+  "timeout_seconds": 30,
+  "cooldown_seconds": 0,
+  "metadata": {
+    "display_name": "MCP Bridge",
+    "category": "External Integration",
+    "version": "1.0.0",
+    "author": "Anna AI System",
+    "requires_external_service": true
+  },
+  "available_commands": [
+    {
+      "command": "list_servers",
+      "description": "List all connected MCP servers and their status",
+      "format": "mcp_bridge.list_servers",
+      "arguments": []
+    },
+    {
+      "command": "list_tools",
+      "description": "List all available tools from connected MCP servers",
+      "format": "mcp_bridge.list_tools",
+      "arguments": []
+    },
+    {
+      "command": "call_tool",
+      "description": "Execute a tool from an MCP server",
+      "format": "mcp_bridge.call_tool",
+      "arguments": [
+        {
+          "name": "tool_id",
+          "type": "string",
+          "required": true,
+          "description": "Full tool identifier (server.tool_name)"
+        },
+        {
+          "name": "arguments",
+          "type": "object",
+          "required": true,
+          "description": "Tool arguments as dictionary"
+        }
+      ]
+    },
+    {
+      "command": "add_server",
+      "description": "Connect to a new MCP server",
+      "format": "mcp_bridge.add_server",
+      "arguments": [
+        {
+          "name": "server_name",
+          "type": "string",
+          "required": true,
+          "description": "Unique name for this server"
+        },
+        {
+          "name": "command",
+          "type": "string",
+          "required": true,
+          "description": "Command to start the MCP server"
+        },
+        {
+          "name": "args",
+          "type": "array",
+          "required": false,
+          "description": "Command arguments as list"
+        }
+      ]
+    },
+    {
+      "command": "remove_server",
+      "description": "Disconnect from an MCP server",
+      "format": "mcp_bridge.remove_server",
+      "arguments": [
+        {
+          "name": "server_name",
+          "type": "string",
+          "required": true,
+          "description": "Name of server to disconnect"
+        }
+      ]
+    }
+  ],
+  "tool_usage_guidance": [
+    "MCP Bridge connects to external MCP servers via stdio transport",
+    "Each server provides its own set of tools dynamically",
+    "Always use list_servers and list_tools to discover available capabilities",
+    "Tool IDs use format: server_name.tool_name",
+    "Servers are configured in ~/.mcp/servers/config.json",
+    "Default filesystem server is auto-configured on first run",
+    "Monitor server health via context loop notifications"
+  ],
+  "tool_usage_examples": [
+    "{\"tool\": \"mcp_bridge.list_servers\", \"args\": []}",
+    "{\"tool\": \"mcp_bridge.list_tools\", \"args\": []}",
+    "{\"tool\": \"mcp_bridge.call_tool\", \"args\": [\"filesystem.read_file\", {\"path\": \"document.txt\"}]}",
+    "{\"tool\": \"mcp_bridge.add_server\", \"args\": [\"github\", \"npx\", [\"-y\", \"@modelcontextprotocol/server-github\"]]}",
+    "{\"tool\": \"mcp_bridge.remove_server\", \"args\": [\"github\"]}"
+  ]
+}
