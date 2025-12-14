@@ -3,6 +3,7 @@
   "control_variable_name": "USE_UNITY_ANIMATION",
   "control_variable_value": false,
   "tool_description": "Control Unity VRM character animations and emotions via WebSocket",
+  "priority": "LOW",
   "available_commands": [
     {
       "command": "emotion",

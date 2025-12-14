@@ -3,6 +3,7 @@
   "control_variable_name": "PLAYING_MINECRAFT",
   "control_variable_value": true,
   "tool_description": "Minecraft bot control with full command execution, vision, and situational awareness",
+  "priority": "HIGH",
   "available_commands": [
     {
       "command": "gather_resource",

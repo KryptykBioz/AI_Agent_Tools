@@ -3,6 +3,7 @@
   "control_variable_name": "USE_MCP_BRIDGE",
   "control_variable_value": false,
   "tool_description": "Bridge to Model Context Protocol servers enabling dynamic tool discovery and execution",
+  "priority": "LOW",
   "timeout_seconds": 30,
   "cooldown_seconds": 0,
   "metadata": {

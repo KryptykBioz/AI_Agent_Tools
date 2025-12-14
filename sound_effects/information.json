@@ -3,6 +3,7 @@
   "control_variable_name": "USE_SOUND_EFFECTS",
   "control_variable_value": false,
   "tool_description": "Play sound effects from library to enhance interactions",
+  "priority": "LOW",
   "available_commands": [
     {
       "command": "play",

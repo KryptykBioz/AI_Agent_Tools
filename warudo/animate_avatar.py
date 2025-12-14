@@ -13,7 +13,7 @@ import json
 import threading
 from typing import Dict, List, Optional
 from collections import deque
-# from BASE.core.logger import Logger, MessageType
+from BASE.core.logger import Logger
 
 WEBSOCKET_AVAILABLE = True
 try:
@@ -30,6 +30,7 @@ class WarudoWebSocketController:
         self.ws_app = None
         self.ws_thread = None
         self.ws_connected = False
+        self.logger = Logger()  # Get singleton instance
         
         # Event-based connection tracking (faster than polling)
         self._connection_event = threading.Event()
@@ -40,7 +41,6 @@ class WarudoWebSocketController:
         self._queue_lock = threading.Lock()
         
         self._last_error = None
-        # self.logger = logger if logger else Logger(name="WarudoController")
 
         self.available_emotions = ['happy', 'angry', 'sad', 'relaxed', 'surprised']
         self.available_animations = [
@@ -49,28 +49,28 @@ class WarudoWebSocketController:
         ]
 
     def _on_message(self, ws, message):
-        print(f"Received: {message}")
+        self.logger.warudo(f"Received: {message}")
 
     def _on_error(self, ws, error):
-        print(f"WebSocket error: {error}")
+        self.logger.warudo(f"WebSocket error: {error}")
         self._last_error = error
         self.ws_connected = False
         self._connection_event.clear()
 
     def _on_close(self, ws, close_status_code, close_msg):
-        print(f"Connection closed: {close_status_code} {close_msg}")
+        self.logger.warudo(f"Connection closed: {close_status_code} {close_msg}")
         self.ws_connected = False
         self._connection_event.clear()
 
     def _on_open(self, ws):
-        print("Connection opened")
+        self.logger.warudo("Connection opened")
         self.ws_connected = True
-        self._connection_event.set()  # Signal connection ready
+        self._connection_event.set()
 
     def connect_websocket(self, timeout: float = 5.0) -> bool:
         """Connect with event-based waiting (no busy-wait)"""
         if not WEBSOCKET_AVAILABLE:
-            print("websocket-client not available")
+            self.logger.warning("websocket-client not available")
             return False
 
         # Fast path: already connected
@@ -96,7 +96,7 @@ class WarudoWebSocketController:
             return connected
 
         except Exception as e:
-            print(f"Failed to start connection: {e}")
+            self.logger.error(f"Failed to start connection: {e}")
             self._last_error = e
             return False
 
@@ -107,16 +107,16 @@ class WarudoWebSocketController:
 
         # Fast path check (no lock needed for read)
         if not self.ws_connected:
-            print("Not connected; cannot send")
+            self.logger.warning("Not connected; cannot send")
             return False
 
         try:
             message = json.dumps(command)
             self.ws_app.send(message)
-            print(f"Sent: {message}")
+            self.logger.warudo(f"Sent: {message}")
             return True
         except Exception as e:
-            print(f"Failed to send command: {e}")
+            self.logger.error(f"Failed to send command: {e}")
             self._last_error = e
             self.ws_connected = False
             self._connection_event.clear()
@@ -151,16 +151,9 @@ class WarudoManager:
     """High-level manager with connection pooling"""
 
     def __init__(self, websocket_url: str = "ws://127.0.0.1:19190", 
-                 auto_connect: bool = True, timeout: float = 5.0, gui_logger=None):
+                 auto_connect: bool = True, timeout: float = 5.0):
         self.enabled = True
-        
-        self.logger = Logger(
-            name="Warudo",
-            enable_timestamps=True,
-            enable_console=False,
-            gui_callback=gui_logger,
-            config=config
-        )
+        self.logger = Logger()  # Get singleton instance
         
         self.controller = WarudoWebSocketController(websocket_url)
         
@@ -170,9 +163,9 @@ class WarudoManager:
     def connect(self, timeout: float = 5.0) -> bool:
         success = self.controller.connect_websocket(timeout=timeout)
         if success:
-            print("Connected successfully")
+            self.logger.warudo("Connected successfully")
         else:
-            print("Connection failed")
+            self.logger.warning("Connection failed")
         return success
 
     def send_emotion(self, emotion: str) -> bool:
@@ -181,13 +174,13 @@ class WarudoManager:
             return False
         
         if emotion not in self.controller.available_emotions:
-            print(f"Unknown emotion: {emotion}")
+            self.logger.warning(f"Unknown emotion: {emotion}")
             return False
         
         command = {"action": "emotion", "data": emotion}
         success = self.controller.send_websocket_command(command)
         if success:
-            print(f"Emotion set: {emotion}")
+            self.logger.warudo(f"Emotion set: {emotion}")
         return success
 
     def send_animation(self, animation: str) -> bool:
@@ -196,13 +189,13 @@ class WarudoManager:
             return False
         
         if animation not in self.controller.available_animations:
-            print(f"Unknown animation: {animation}")
+            self.logger.warning(f"Unknown animation: {animation}")
             return False
         
         command = {"action": "animation", "data": animation}
         success = self.controller.send_websocket_command(command)
         if success:
-            print(f"Animation played: {animation}")
+            self.logger.warudo(f"Animation played: {animation}")
         return success
 
     def detect_and_send_animations(self, text: str):
@@ -222,8 +215,8 @@ class WarudoManager:
             return True
         elif cmd == "/warudo_commands":
             cmds = self.controller.get_available_commands()
-            print(f"Emotions: {', '.join(cmds['emotions'])}")
-            print(f"Animations: {', '.join(cmds['animations'])}")
+            self.logger.warudo(f"Emotions: {', '.join(cmds['emotions'])}")
+            self.logger.warudo(f"Animations: {', '.join(cmds['animations'])}")
             return True
         elif cmd.startswith("/warudo_emotion "):
             return self.send_emotion(cmd.split(" ", 1)[1])

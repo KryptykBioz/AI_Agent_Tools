@@ -3,6 +3,7 @@
   "control_variable_name": "USE_CODING",
   "control_variable_value": false,
   "tool_description": "Integrate with VS Code extension for AI-powered code editing",
+  "priority": "MEDIUM",
   "available_commands": [
     {
       "command": "edit",

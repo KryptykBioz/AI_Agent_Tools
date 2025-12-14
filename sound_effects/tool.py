@@ -112,6 +112,7 @@ class SoundEffectsTool(BaseTool):
         """
         return PYGAME_AVAILABLE and self._initialized and len(self.available_sounds) > 0
     
+
     def get_status(self) -> Dict[str, Any]:
         """
         Get sound system status
@@ -127,6 +128,15 @@ class SoundEffectsTool(BaseTool):
             'sound_dir': str(self.sound_dir),
             'sounds': list(self.available_sounds.keys()) if self.available_sounds else []
         }
+    
+    def get_available_sounds(self) -> Dict[str, Path]:
+        """
+        Get available sounds for GUI
+        
+        Returns:
+            Dict mapping sound names to file paths
+        """
+        return self.available_sounds.copy()
     
     def _scan_sounds(self) -> Dict[str, Path]:
         """

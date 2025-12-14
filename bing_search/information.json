@@ -3,6 +3,7 @@
   "control_variable_name": "USE_BING_SEARCH",
   "control_variable_value": false,
   "tool_description": "Web search using the Bing search engine for current information",
+  "priority": "LOW",
   "available_commands": [
     {
       "command": "search",

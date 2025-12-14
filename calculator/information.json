@@ -1,0 +1,195 @@
+{
+  "tool_name": "calculator",
+  "control_variable_name": "USE_CALCULATOR",
+  "control_variable_value": false,
+  "tool_description": "Advanced calculator for mathematical operations, conversions, and scientific calculations",
+  "priority": "MEDIUM",
+  "available_commands": [
+    {
+      "command": "calculate",
+      "args": ["expression: str"],
+      "description": "Evaluate a mathematical expression",
+      "format": "{\"tool\": \"calculator.calculate\", \"args\": [\"2 + 2 * 3\"]}",
+      "arguments": [
+        {
+          "name": "expression",
+          "type": "string",
+          "required": true,
+          "description": "Mathematical expression to evaluate (supports +, -, *, /, ^, %, sqrt, sin, cos, tan, log, ln, abs, etc.)"
+        }
+      ]
+    },
+    {
+      "command": "convert",
+      "args": ["value: float", "from_unit: str", "to_unit: str"],
+      "description": "Convert between units",
+      "format": "{\"tool\": \"calculator.convert\", \"args\": [100, \"celsius\", \"fahrenheit\"]}",
+      "arguments": [
+        {
+          "name": "value",
+          "type": "float",
+          "required": true,
+          "description": "Value to convert"
+        },
+        {
+          "name": "from_unit",
+          "type": "string",
+          "required": true,
+          "description": "Source unit (e.g., celsius, meters, pounds, usd)"
+        },
+        {
+          "name": "to_unit",
+          "type": "string",
+          "required": true,
+          "description": "Target unit (e.g., fahrenheit, feet, kilograms, eur)"
+        }
+      ]
+    },
+    {
+      "command": "solve",
+      "args": ["equation: str", "variable: str"],
+      "description": "Solve algebraic equation for a variable",
+      "format": "{\"tool\": \"calculator.solve\", \"args\": [\"2*x + 5 = 15\", \"x\"]}",
+      "arguments": [
+        {
+          "name": "equation",
+          "type": "string",
+          "required": true,
+          "description": "Equation to solve (must contain = sign)"
+        },
+        {
+          "name": "variable",
+          "type": "string",
+          "required": true,
+          "description": "Variable to solve for (e.g., x, y, z)"
+        }
+      ]
+    },
+    {
+      "command": "statistics",
+      "args": ["numbers: list"],
+      "description": "Calculate statistics for a list of numbers",
+      "format": "{\"tool\": \"calculator.statistics\", \"args\": [[1, 2, 3, 4, 5]]}",
+      "arguments": [
+        {
+          "name": "numbers",
+          "type": "list",
+          "required": true,
+          "description": "List of numbers to analyze"
+        }
+      ]
+    },
+    {
+      "command": "percentage",
+      "args": ["part: float", "whole: float"],
+      "description": "Calculate percentage",
+      "format": "{\"tool\": \"calculator.percentage\", \"args\": [25, 200]}",
+      "arguments": [
+        {
+          "name": "part",
+          "type": "float",
+          "required": true,
+          "description": "Part value"
+        },
+        {
+          "name": "whole",
+          "type": "float",
+          "required": true,
+          "description": "Whole value"
+        }
+      ]
+    },
+    {
+      "command": "compound_interest",
+      "args": ["principal: float", "rate: float", "time: float", "frequency: int"],
+      "description": "Calculate compound interest",
+      "format": "{\"tool\": \"calculator.compound_interest\", \"args\": [1000, 5, 10, 12]}",
+      "arguments": [
+        {
+          "name": "principal",
+          "type": "float",
+          "required": true,
+          "description": "Initial amount"
+        },
+        {
+          "name": "rate",
+          "type": "float",
+          "required": true,
+          "description": "Annual interest rate (percentage)"
+        },
+        {
+          "name": "time",
+          "type": "float",
+          "required": true,
+          "description": "Time period in years"
+        },
+        {
+          "name": "frequency",
+          "type": "integer",
+          "required": true,
+          "description": "Compounding frequency per year (1=yearly, 4=quarterly, 12=monthly)"
+        }
+      ]
+    },
+    {
+      "command": "list_units",
+      "args": ["category: str"],
+      "description": "List available units for conversion",
+      "format": "{\"tool\": \"calculator.list_units\", \"args\": [\"temperature\"]}",
+      "arguments": [
+        {
+          "name": "category",
+          "type": "string",
+          "required": false,
+          "description": "Unit category (temperature, length, weight, volume, speed, time, all)"
+        }
+      ]
+    }
+  ],
+  "tool_usage_guidance": [
+    "Use standard mathematical operators: +, -, *, /, ^ (power), % (modulo)",
+    "Supported functions: sqrt, sin, cos, tan, log, ln, abs, round, ceil, floor",
+    "Use parentheses for grouping: (2 + 3) * 4",
+    "For equations, use = sign to separate left and right sides",
+    "Unit names are case-insensitive (celsius = Celsius = CELSIUS)",
+    "Conversion supports: temperature, length, weight, volume, speed, time",
+    "Statistics returns: mean, median, mode, std_dev, min, max, sum, count",
+    "Use pi for π constant and e for Euler's number",
+    "Trigonometric functions use radians by default"
+  ],
+  "tool_usage_examples": [
+    "{\"tool\": \"calculator.calculate\", \"args\": [\"sqrt(144) + 2^3\"]}",
+    "{\"tool\": \"calculator.calculate\", \"args\": [\"sin(pi/2) * 100\"]}",
+    "{\"tool\": \"calculator.convert\", \"args\": [100, \"celsius\", \"fahrenheit\"]}",
+    "{\"tool\": \"calculator.convert\", \"args\": [5, \"miles\", \"kilometers\"]}",
+    "{\"tool\": \"calculator.solve\", \"args\": [\"2*x + 5 = 15\", \"x\"]}",
+    "{\"tool\": \"calculator.statistics\", \"args\": [[10, 20, 30, 40, 50]]}",
+    "{\"tool\": \"calculator.percentage\", \"args\": [25, 200]}",
+    "{\"tool\": \"calculator.compound_interest\", \"args\": [1000, 5, 10, 12]}",
+    "{\"tool\": \"calculator.list_units\", \"args\": [\"temperature\"]}"
+  ],
+  "proactive_triggers": [
+    "When user asks to calculate or compute something",
+    "When user mentions numbers and mathematical operations",
+    "When user needs unit conversions",
+    "When user asks 'what is X plus/minus/times/divided by Y'",
+    "When solving word problems involving math",
+    "When user needs percentage calculations",
+    "When discussing finances and interest calculations",
+    "When user needs statistical analysis of data"
+  ],
+  "cooldown_seconds": 0,
+  "timeout_seconds": 5,
+  "retry_on_failure": false,
+  "max_retries": 0,
+  "metadata": {
+    "category": "Utilities",
+    "display_name": "Calculator",
+    "gui_label": "Calculator",
+    "gui_icon": "",
+    "version": "1.0.0",
+    "requires_api": false,
+    "dependencies": [],
+    "notes": "Advanced calculator with expression evaluation, unit conversion, equation solving, and statistical analysis. Pure Python implementation with no external dependencies."
+  }
+}

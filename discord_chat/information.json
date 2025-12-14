@@ -3,6 +3,7 @@
   "control_variable_name": "IN_DISCORD_CHAT",
   "control_variable_value": true,
   "tool_description": "Send messages to Discord channels with automatic message splitting and sanitization",
+  "priority": "MEDIUM",
   "available_commands": [
     {
       "command": "send_message",

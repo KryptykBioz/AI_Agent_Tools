@@ -3,6 +3,7 @@
   "control_variable_name": "USE_WARUDO_ANIMATION",
   "control_variable_value": false,
   "tool_description": "Control avatar animations and emotions using Warudo commands",
+  "priority": "LOW",
   "available_commands": [
     {
       "command": "emotion",

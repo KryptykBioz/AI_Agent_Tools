@@ -1,0 +1,158 @@
+{
+  "tool_name": "calendar",
+  "control_variable_name": "USE_CALENDAR",
+  "control_variable_value": false,
+  "tool_description": "Local calendar system for creating, viewing, and managing events and reminders",
+  "priority": "MEDIUM",
+  "available_commands": [
+    {
+      "command": "create_event",
+      "args": ["title: str", "date: str", "time: str", "duration_minutes: int", "description: str (optional)"],
+      "description": "Create a new calendar event",
+      "format": "{\"tool\": \"calendar.create_event\", \"args\": [\"Meeting\", \"2025-12-15\", \"14:00\", 60, \"Team sync\"]}",
+      "arguments": [
+        {
+          "name": "title",
+          "type": "string",
+          "required": true,
+          "description": "Event title or name"
+        },
+        {
+          "name": "date",
+          "type": "string",
+          "required": true,
+          "description": "Date in YYYY-MM-DD format"
+        },
+        {
+          "name": "time",
+          "type": "string",
+          "required": true,
+          "description": "Time in HH:MM format (24-hour)"
+        },
+        {
+          "name": "duration_minutes",
+          "type": "integer",
+          "required": true,
+          "description": "Event duration in minutes"
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": false,
+          "description": "Optional event description"
+        }
+      ]
+    },
+    {
+      "command": "view_today",
+      "args": [],
+      "description": "View all events scheduled for today",
+      "format": "{\"tool\": \"calendar.view_today\", \"args\": []}",
+      "arguments": []
+    },
+    {
+      "command": "view_week",
+      "args": [],
+      "description": "View all events for the current week",
+      "format": "{\"tool\": \"calendar.view_week\", \"args\": []}",
+      "arguments": []
+    },
+    {
+      "command": "view_date",
+      "args": ["date: str"],
+      "description": "View events for a specific date",
+      "format": "{\"tool\": \"calendar.view_date\", \"args\": [\"2025-12-15\"]}",
+      "arguments": [
+        {
+          "name": "date",
+          "type": "string",
+          "required": true,
+          "description": "Date in YYYY-MM-DD format"
+        }
+      ]
+    },
+    {
+      "command": "delete_event",
+      "args": ["event_id: str"],
+      "description": "Delete an event by ID",
+      "format": "{\"tool\": \"calendar.delete_event\", \"args\": [\"evt_123456\"]}",
+      "arguments": [
+        {
+          "name": "event_id",
+          "type": "string",
+          "required": true,
+          "description": "Unique event identifier"
+        }
+      ]
+    },
+    {
+      "command": "search_events",
+      "args": ["query: str"],
+      "description": "Search events by title or description",
+      "format": "{\"tool\": \"calendar.search_events\", \"args\": [\"meeting\"]}",
+      "arguments": [
+        {
+          "name": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search query text"
+        }
+      ]
+    },
+    {
+      "command": "upcoming",
+      "args": ["count: int"],
+      "description": "Get next N upcoming events",
+      "format": "{\"tool\": \"calendar.upcoming\", \"args\": [5]}",
+      "arguments": [
+        {
+          "name": "count",
+          "type": "integer",
+          "required": true,
+          "description": "Number of events to retrieve (max 20)"
+        }
+      ]
+    }
+  ],
+  "tool_usage_guidance": [
+    "Always use YYYY-MM-DD format for dates",
+    "Use 24-hour time format (HH:MM) for event times",
+    "Event IDs are returned when creating events - save them for deletion",
+    "Search is case-insensitive and searches both title and description",
+    "Duration must be in minutes (e.g., 60 for 1 hour, 30 for 30 minutes)",
+    "View commands automatically sort events by date and time",
+    "Calendar persists across sessions using local storage"
+  ],
+  "tool_usage_examples": [
+    "{\"tool\": \"calendar.create_event\", \"args\": [\"Team Meeting\", \"2025-12-15\", \"14:00\", 60, \"Weekly sync\"]}",
+    "{\"tool\": \"calendar.view_today\", \"args\": []}",
+    "{\"tool\": \"calendar.view_week\", \"args\": []}",
+    "{\"tool\": \"calendar.view_date\", \"args\": [\"2025-12-20\"]}",
+    "{\"tool\": \"calendar.upcoming\", \"args\": [5]}",
+    "{\"tool\": \"calendar.search_events\", \"args\": [\"meeting\"]}",
+    "{\"tool\": \"calendar.delete_event\", \"args\": [\"evt_123456\"]}"
+  ],
+  "proactive_triggers": [
+    "When user mentions scheduling or planning",
+    "When user asks about their schedule or availability",
+    "When user wants to remember something time-sensitive",
+    "When discussing upcoming events or deadlines",
+    "When user needs to organize their time",
+    "At the start of conversations to mention upcoming events",
+    "When user asks 'what's on my calendar' or similar"
+  ],
+  "cooldown_seconds": 0,
+  "timeout_seconds": 5,
+  "retry_on_failure": false,
+  "max_retries": 0,
+  "metadata": {
+    "category": "Productivity",
+    "display_name": "Calendar",
+    "gui_label": "Calendar",
+    "gui_icon": "",
+    "version": "1.0.0",
+    "requires_api": false,
+    "dependencies": [],
+    "notes": "Local calendar system with persistent storage. Does not sync with external calendars. All events stored locally in JSON format."
+  }
+}

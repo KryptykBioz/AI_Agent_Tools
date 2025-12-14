@@ -3,6 +3,7 @@
   "control_variable_name": "USE_VISION",
   "control_variable_value": false,
   "tool_description": "Capture and analyze screenshots using computer vision models",
+  "priority": "MEDIUM",
   "available_commands": [
     {
       "command": "screenshot",

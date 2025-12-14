@@ -3,6 +3,7 @@
   "control_variable_name": "USE_REMINDERS",
   "control_variable_value": false,
   "tool_description": "Create and manage time-based reminders with natural language time parsing. Reminders persist across sessions and notify proactively when due.",
+  "priority": "CRITICAL",
   "available_commands": [
     {
       "command": "create",

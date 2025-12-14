@@ -3,6 +3,7 @@
   "control_variable_name": "USE_WIKI_SEARCH",
   "control_variable_value": false,
   "tool_description": "Wikipedia search for factual, encyclopedic information with position-tracking for varied results",
+  "priority": "LOW",
   "available_commands": [
     {
       "command": "search",

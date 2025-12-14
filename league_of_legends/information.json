@@ -3,6 +3,7 @@
   "control_variable_name": "PLAYING_LEAGUE",
   "control_variable_value": false,
   "tool_description": "League of Legends spectator mode with real-time match data and threat analysis",
+  "priority": "HIGH",
   "available_commands": [
     {
       "command": "get_context",

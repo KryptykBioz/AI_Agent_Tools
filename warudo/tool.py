@@ -27,12 +27,11 @@ class WarudoAnimationTool(BaseTool):
             'ws://127.0.0.1:19190'
         )
         
-        # Create WarudoManager
+        # Create WarudoManager (uses singleton Logger internally)
         self.manager = WarudoManager(
             websocket_url=websocket_url,
             auto_connect=True,
-            timeout=2.0,
-            gui_logger=None
+            timeout=2.0
         )
         
         # Check connection status
