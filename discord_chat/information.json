@@ -1,7 +1,7 @@
 {
   "tool_name": "discord_chat",
   "control_variable_name": "IN_DISCORD_CHAT",
-  "control_variable_value": true,
+  "control_variable_value": false,
   "tool_description": "Send messages to Discord channels with automatic message splitting and sanitization",
   "priority": "MEDIUM",
   "available_commands": [

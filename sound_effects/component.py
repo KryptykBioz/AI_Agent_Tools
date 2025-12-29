@@ -2,6 +2,7 @@
 """
 Sounds Tool - GUI Component
 Dynamic GUI panel for sound effects playback
+FIXED: Graceful handling when tool is disabled
 """
 import tkinter as tk
 from tkinter import ttk
@@ -29,6 +30,7 @@ class SoundsComponent:
         self._available_sounds = []
         self._is_muted = False
         self._pre_mute_volume = 1.0
+        self._initialization_complete = False  # NEW: Track if we've finished init
     
     def create_panel(self, parent_frame):
         """Create the sounds panel"""
@@ -48,10 +50,125 @@ class SoundsComponent:
         # Sound buttons section
         self._create_sounds_section()
         
+        # Mark initialization complete
+        self._initialization_complete = True
+        
         # Start status updates
         self._schedule_status_update()
         
         return self.panel_frame
+    
+    def _create_sounds_section(self):
+        """Create sound effect buttons"""
+        sounds_frame = ttk.LabelFrame(
+            self.panel_frame,
+            text="Available Sounds",
+            style="Dark.TLabelframe"
+        )
+        sounds_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0, 5))
+        
+        # Scrollable container
+        canvas = tk.Canvas(
+            sounds_frame,
+            bg=DarkTheme.BG_DARK,
+            highlightthickness=0,
+            height=200
+        )
+        scrollbar = ttk.Scrollbar(sounds_frame, orient="vertical", command=canvas.yview)
+        self.scrollable_frame = ttk.Frame(canvas)
+        
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Bind mouse wheel
+        canvas.bind_all("<MouseWheel>", lambda e: canvas.yview_scroll(-1*(e.delta//120), "units"))
+        
+        # Load sounds (gracefully handles disabled tool)
+        self._load_available_sounds()
+    
+    def _load_available_sounds(self):
+        """Load and display available sound effects"""
+        # Clear existing buttons
+        for widget in self.scrollable_frame.winfo_children():
+            widget.destroy()
+        self.sound_buttons.clear()
+        
+        self.sounds_tool = self._get_sounds_tool()
+        
+        if not self.sounds_tool:
+            # FIXED: Don't log error during initialization
+            # Tool is simply not enabled yet
+            if self._initialization_complete:
+                # Only log if we've finished initialization and tool disappeared
+                self.logger.system("[Sounds] Tool not currently enabled")
+            
+            self._show_no_sounds("Tool not enabled - toggle USE_SOUND_EFFECTS to enable")
+            self._update_status_unavailable("Tool not enabled")
+            return
+        
+        # Get available sounds
+        try:
+            sounds = self.sounds_tool.get_available_sounds()
+            self._available_sounds = sounds
+            
+            if not sounds:
+                self._show_no_sounds("No sound files found in sounds/ directory")
+                self._update_status_unavailable("No sounds found")
+                return
+            
+            # Create grid of sound buttons (3 columns)
+            sorted_sounds = sorted(sounds.keys())
+            
+            for idx, sound in enumerate(sorted_sounds):
+                row = idx // 3
+                col = idx % 3
+                
+                btn_frame = ttk.Frame(self.scrollable_frame)
+                btn_frame.grid(row=row, column=col, padx=3, pady=3, sticky="ew")
+                
+                # Configure grid weights
+                self.scrollable_frame.columnconfigure(col, weight=1)
+                
+                # Sound button
+                sound_btn = ttk.Button(
+                    btn_frame,
+                    text=f"🔊 {sound}",
+                    command=lambda s=sound: self._play_sound(s),
+                    width=15
+                )
+                sound_btn.pack(fill=tk.X)
+                
+                self.sound_buttons[sound] = sound_btn
+            
+            # Update status
+            self._update_status_available(len(sounds))
+            
+        except Exception as e:
+            self.logger.error(f"[Sounds] Error loading sounds: {e}")
+            self._show_error(f"Error loading sounds: {e}")
+            self._show_no_sounds(f"Error: {e}")
+    
+    def _show_no_sounds(self, message: str):
+        """Show message when no sounds available"""
+        no_sounds_label = tk.Label(
+            self.scrollable_frame,
+            text=message,
+            font=("Segoe UI", 9),
+            foreground=DarkTheme.FG_MUTED,
+            background=DarkTheme.BG_DARKER,
+            pady=20
+        )
+        no_sounds_label.pack(fill=tk.BOTH, expand=True)
+    
+    # ... rest of methods remain the same (status section, volume control, etc.)
     
     def _create_status_section(self):
         """Create status display"""
@@ -60,7 +177,7 @@ class SoundsComponent:
         
         self.status_label = tk.Label(
             status_frame,
-            text="⚫ Loading...",
+            text="⚫ Tool not enabled",
             font=("Segoe UI", 9),
             foreground=DarkTheme.FG_MUTED,
             background=DarkTheme.BG_DARKER,
@@ -137,110 +254,6 @@ class SoundsComponent:
         )
         stop_btn.pack(side=tk.LEFT, padx=(5, 0))
     
-    def _create_sounds_section(self):
-        """Create sound effect buttons"""
-        sounds_frame = ttk.LabelFrame(
-            self.panel_frame,
-            text="Available Sounds",
-            style="Dark.TLabelframe"
-        )
-        sounds_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0, 5))
-        
-        # Scrollable container
-        canvas = tk.Canvas(
-            sounds_frame,
-            bg=DarkTheme.BG_DARK,
-            highlightthickness=0,
-            height=200
-        )
-        scrollbar = ttk.Scrollbar(sounds_frame, orient="vertical", command=canvas.yview)
-        self.scrollable_frame = ttk.Frame(canvas)
-        
-        self.scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-        
-        canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # Bind mouse wheel
-        canvas.bind_all("<MouseWheel>", lambda e: canvas.yview_scroll(-1*(e.delta//120), "units"))
-        
-        # Load sounds
-        self._load_available_sounds()
-    
-    def _load_available_sounds(self):
-        """Load and display available sound effects"""
-        # Clear existing buttons
-        for widget in self.scrollable_frame.winfo_children():
-            widget.destroy()
-        self.sound_buttons.clear()
-        
-        self.sounds_tool = self._get_sounds_tool()
-        
-        if not self.sounds_tool:
-            self._show_error("Sound tool not initialized")
-            self._show_no_sounds("Tool not initialized")
-            return
-        
-        # Get available sounds
-        try:
-            sounds = self.sounds_tool.get_available_sounds()
-            self._available_sounds = sounds
-            
-            if not sounds:
-                self._show_no_sounds("No sound files found in sounds/ directory")
-                self._update_status_unavailable("No sounds found")
-                return
-            
-            # Create grid of sound buttons (3 columns)
-            sorted_sounds = sorted(sounds.keys())
-            
-            for idx, sound in enumerate(sorted_sounds):
-                row = idx // 3
-                col = idx % 3
-                
-                btn_frame = ttk.Frame(self.scrollable_frame)
-                btn_frame.grid(row=row, column=col, padx=3, pady=3, sticky="ew")
-                
-                # Configure grid weights
-                self.scrollable_frame.columnconfigure(col, weight=1)
-                
-                # Sound button
-                sound_btn = ttk.Button(
-                    btn_frame,
-                    text=f"🔊 {sound}",
-                    command=lambda s=sound: self._play_sound(s),
-                    width=15
-                )
-                sound_btn.pack(fill=tk.X)
-                
-                self.sound_buttons[sound] = sound_btn
-            
-            # Update status
-            self._update_status_available(len(sounds))
-            
-        except Exception as e:
-            self.logger.error(f"[Sounds] Error loading sounds: {e}")
-            self._show_error(f"Error loading sounds: {e}")
-            self._show_no_sounds(f"Error: {e}")
-    
-    def _show_no_sounds(self, message: str):
-        """Show message when no sounds available"""
-        no_sounds_label = tk.Label(
-            self.scrollable_frame,
-            text=message,
-            font=("Segoe UI", 9),
-            foreground=DarkTheme.FG_MUTED,
-            background=DarkTheme.BG_DARKER,
-            pady=20
-        )
-        no_sounds_label.pack(fill=tk.BOTH, expand=True)
-    
     def _play_sound(self, sound_name: str):
         """Play a sound effect"""
         if not self.sounds_tool:
@@ -314,7 +327,7 @@ class SoundsComponent:
         self.sounds_tool = self._get_sounds_tool()
         
         if not self.sounds_tool:
-            self._update_status_unavailable("Tool not available")
+            self._update_status_unavailable("Tool not enabled")
             return
         
         status = self.sounds_tool.get_status()
@@ -374,7 +387,9 @@ class SoundsComponent:
             text=f"❌ {message}",
             foreground=DarkTheme.ACCENT_RED
         )
-        self.logger.error(f"[Sounds] {message}")
+        # Only log errors that happen after initialization
+        if self._initialization_complete:
+            self.logger.error(f"[Sounds] {message}")
     
     def cleanup(self):
         """Cleanup component resources"""

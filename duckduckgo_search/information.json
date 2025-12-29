@@ -1,0 +1,76 @@
+{
+  "tool_name": "duckduckgo",
+  "control_variable_name": "USE_DUCKDUCKGO_SEARCH",
+  "control_variable_value": false,
+  "tool_description": "Privacy-focused web search using DuckDuckGo with no tracking or user profiling",
+  "priority": "LOW",
+  "available_commands": [
+    {
+      "command": "search",
+      "args": ["query: str"],
+      "description": "Search the web for information using DuckDuckGo",
+      "format": "{\"tool\": \"duckduckgo.search\", \"args\": [\"search term\"]}",
+      "arguments": [
+        {
+          "name": "query",
+          "type": "string",
+          "required": true,
+          "description": "Search query text"
+        }
+      ]
+    },
+    {
+      "command": "reset",
+      "args": ["query: str (optional)"],
+      "description": "Reset pagination tracking for a query or all queries",
+      "format": "{\"tool\": \"duckduckgo.reset\", \"args\": [\"query\"]}",
+      "arguments": [
+        {
+          "name": "query",
+          "type": "string",
+          "required": false,
+          "description": "Specific query to reset, or omit to reset all"
+        }
+      ]
+    }
+  ],
+  "tool_usage_examples": [
+    "{\"tool\": \"duckduckgo.search\", \"args\": [\"Python tutorials\"]}",
+    "{\"tool\": \"duckduckgo.search\", \"args\": [\"latest AI news\"]}",
+    "{\"tool\": \"duckduckgo.search\", \"args\": [\"how to build REST API\"]}",
+    "{\"tool\": \"duckduckgo.search\", \"args\": [\"machine learning basics\"]}",
+    "{\"tool\": \"duckduckgo.reset\", \"args\": [\"Python tutorials\"]}"
+  ],
+  "tool_usage_guidance": [
+    "Use duckduckgo for privacy-focused web searches without tracking",
+    "Search queries should be concise (1-6 words for best results)",
+    "Each result is from a different domain for source diversity",
+    "Same query returns different results on subsequent calls (pagination)",
+    "No API key required - always available",
+    "Best for current events, news, recent developments, and factual lookups",
+    "Do not use for personal memory or experience-related queries",
+    "Use reset command to restart pagination for a specific query"
+  ],
+  "proactive_triggers": [
+    "When user asks about current events or recent news",
+    "When information might have changed since knowledge cutoff",
+    "When user asks 'what's the latest' or 'recent updates'",
+    "When factual verification of current information is needed",
+    "When user expresses privacy concerns about search",
+    "When user wants diverse sources from different domains"
+  ],
+  "cooldown_seconds": 2,
+  "timeout_seconds": 25,
+  "retry_on_failure": true,
+  "max_retries": 2,
+  "metadata": {
+    "category": "Information Retrieval",
+    "display_name": "DuckDuckGo",
+    "gui_label": "DuckDuckGo",
+    "gui_icon": "",
+    "version": "1.0.0",
+    "requires_api": false,
+    "dependencies": ["requests"],
+    "notes": "Privacy-focused search engine. No API key required. Uses HTML scraping. Each result from a different domain for diversity. Automatic pagination provides different results on subsequent searches."
+  }
+}

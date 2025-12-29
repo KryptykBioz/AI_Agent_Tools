@@ -151,7 +151,7 @@ class CalendarTool(BaseTool):
         """Initialize calendar tool"""
         # Determine storage path
         if hasattr(self._config, 'project_root'):
-            storage_dir = Path(self._config.project_root) / 'BASE' / 'tools' / 'installed' / 'calendar'
+            storage_dir = Path(self._config.project_root) / 'personality' / 'memory'
         else:
             storage_dir = Path(__file__).parent
         

@@ -1,0 +1,62 @@
+{
+  "tool_name": "web_fetch",
+  "control_variable_name": "USE_WEB_FETCH",
+  "control_variable_value": false,
+  "tool_description": "Safe webpage retrieval from approved domains with multiple output formats (text, markdown, PDF)",
+  "priority": "MEDIUM",
+  "available_commands": [
+    {
+      "command": "fetch",
+      "args": ["url: str", "format: Optional[str]"],
+      "description": "Fetch webpage content in specified format (text, markdown, or pdf)",
+      "format": "{\"tool\": \"web_fetch.fetch\", \"args\": [\"https://example.com\", \"text\"]}"
+    },
+    {
+      "command": "list_domains",
+      "args": [],
+      "description": "List all approved domains that can be fetched",
+      "format": "{\"tool\": \"web_fetch.list_domains\", \"args\": []}"
+    }
+  ],
+  "tool_usage_examples": [
+    "{\"tool\": \"web_fetch.fetch\", \"args\": [\"https://en.wikipedia.org/wiki/Python\", \"text\"]}",
+    "{\"tool\": \"web_fetch.fetch\", \"args\": [\"https://github.com/python/cpython\", \"markdown\"]}",
+    "{\"tool\": \"web_fetch.fetch\", \"args\": [\"https://docs.python.org/3/library/asyncio.html\"]}",
+    "{\"tool\": \"web_fetch.list_domains\", \"args\": []}",
+    "{\"tool\": \"web_fetch.fetch\", \"args\": [\"https://stackoverflow.com/questions/123456\", \"text\"]}"
+  ],
+  "tool_usage_guidance": [
+    "Use web_fetch to retrieve webpage content from approved domains",
+    "Default format is 'text' - omit second argument for plain text extraction",
+    "Use 'markdown' format to preserve document structure and links",
+    "Use 'pdf' format for visual fidelity (requires playwright)",
+    "Check approved domains first using list_domains command",
+    "Only pages from whitelisted domains can be fetched",
+    "Maximum page size: 10MB",
+    "Timeout: 30 seconds per request",
+    "JS-heavy sites (Reddit, Twitter) work best with playwright installed",
+    "Without playwright, static HTML sites work better than dynamic sites"
+  ],
+  "proactive_triggers": [
+    "When you need to retrieve information from a specific webpage",
+    "When user asks you to fetch or read a web page",
+    "When you need documentation from approved sites",
+    "When researching a topic and need original source material",
+    "When user provides a URL and asks about its content"
+  ],
+  "cooldown_seconds": 5,
+  "timeout_seconds": 35,
+  "retry_on_failure": true,
+  "max_retries": 2,
+  "metadata": {
+    "category": "Information Retrieval",
+    "display_name": "Web Fetch",
+    "gui_label": "Web Fetch",
+    "gui_icon": "",
+    "version": "1.0.0",
+    "requires_api": false,
+    "dependencies": ["requests", "beautifulsoup4"],
+    "optional_dependencies": ["html2text", "playwright"],
+    "notes": "Domain whitelist ensures safe retrieval. Supports text, markdown, and PDF formats."
+  }
+}

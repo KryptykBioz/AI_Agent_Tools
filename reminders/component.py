@@ -278,7 +278,7 @@ class RemindersComponent:
         """Create widget for a single reminder"""
         frame = tk.Frame(
             self.reminder_container,
-            bg=DarkTheme.BG_LIGHT,
+            bg=DarkTheme.BG_LIGHTER,
             highlightbackground=DarkTheme.BORDER,
             highlightthickness=1
         )
@@ -301,14 +301,14 @@ class RemindersComponent:
         status.pack(side=tk.LEFT, padx=(0, 8))
         
         # Content area
-        content_frame = tk.Frame(frame, bg=DarkTheme.BG_LIGHT)
+        content_frame = tk.Frame(frame, bg=DarkTheme.BG_LIGHTER)
         content_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
         # Description
         desc = tk.Label(
             content_frame,
             text=reminder['description'],
-            bg=DarkTheme.BG_LIGHT,
+            bg=DarkTheme.BG_LIGHTER,
             fg=DarkTheme.FG_PRIMARY,
             font=("Segoe UI", 10, "bold"),
             anchor=tk.W
@@ -326,7 +326,7 @@ class RemindersComponent:
         time_label = tk.Label(
             content_frame,
             text=time_text,
-            bg=DarkTheme.BG_LIGHT,
+            bg=DarkTheme.BG_LIGHTER,
             fg=time_color,
             font=("Segoe UI", 8),
             anchor=tk.W
@@ -339,7 +339,7 @@ class RemindersComponent:
             notify_label = tk.Label(
                 content_frame,
                 text=f"📢 Notified {notification_count}/3 times",
-                bg=DarkTheme.BG_LIGHT,
+                bg=DarkTheme.BG_LIGHTER,
                 fg=DarkTheme.ACCENT_ORANGE if hasattr(DarkTheme, 'ACCENT_ORANGE') else DarkTheme.FG_SECONDARY,
                 font=("Segoe UI", 7),
                 anchor=tk.W
@@ -350,7 +350,7 @@ class RemindersComponent:
         del_btn = tk.Button(
             frame,
             text="✕",
-            bg=DarkTheme.BG_LIGHT,
+            bg=DarkTheme.BG_LIGHTER,
             fg=DarkTheme.FG_MUTED,
             activebackground=DarkTheme.ACCENT_RED,
             activeforeground="white",
@@ -364,23 +364,23 @@ class RemindersComponent:
         # Hover effects
         def on_enter(e):
             if frame.winfo_exists():
-                frame.configure(bg=DarkTheme.BG_HOVER)
-                content_frame.configure(bg=DarkTheme.BG_HOVER)
-                desc.configure(bg=DarkTheme.BG_HOVER)
-                time_label.configure(bg=DarkTheme.BG_HOVER)
-                del_btn.configure(bg=DarkTheme.BG_HOVER)
+                frame.configure(bg=DarkTheme.BG_LIGHTER)
+                content_frame.configure(bg=DarkTheme.BG_LIGHTER)
+                desc.configure(bg=DarkTheme.BG_LIGHTER)
+                time_label.configure(bg=DarkTheme.BG_LIGHTER)
+                del_btn.configure(bg=DarkTheme.BG_LIGHTER)
                 if notification_count > 0:
-                    notify_label.configure(bg=DarkTheme.BG_HOVER)
+                    notify_label.configure(bg=DarkTheme.BG_LIGHTER)
         
         def on_leave(e):
             if frame.winfo_exists():
-                frame.configure(bg=DarkTheme.BG_LIGHT)
-                content_frame.configure(bg=DarkTheme.BG_LIGHT)
-                desc.configure(bg=DarkTheme.BG_LIGHT)
-                time_label.configure(bg=DarkTheme.BG_LIGHT)
-                del_btn.configure(bg=DarkTheme.BG_LIGHT)
+                frame.configure(bg=DarkTheme.BG_LIGHTER)
+                content_frame.configure(bg=DarkTheme.BG_LIGHTER)
+                desc.configure(bg=DarkTheme.BG_LIGHTER)
+                time_label.configure(bg=DarkTheme.BG_LIGHTER)
+                del_btn.configure(bg=DarkTheme.BG_LIGHTER)
                 if notification_count > 0:
-                    notify_label.configure(bg=DarkTheme.BG_LIGHT)
+                    notify_label.configure(bg=DarkTheme.BG_LIGHTER)
         
         frame.bind('<Enter>', on_enter)
         frame.bind('<Leave>', on_leave)

@@ -1,0 +1,78 @@
+{
+  "tool_name": "memory_search",
+  "control_variable_name": "USE_MEMORY_SEARCH",
+  "control_variable_value": false,
+  "tool_description": "Search internal memory tiers (short, medium, long-term, and base knowledge) for relevant past conversations and information",
+  "priority": "MEDIUM",
+  "available_commands": [
+    {
+      "command": "search",
+      "args": ["query: str", "date: Optional[str]"],
+      "description": "Search all memory tiers for relevant entries matching the query. Returns top 5 results.",
+      "format": "{\"tool\": \"memory_search.search\", \"args\": [\"minecraft\"]}"
+    },
+    {
+      "command": "search_short",
+      "args": ["query: str"],
+      "description": "Search only short-term memory (recent conversation). Returns top 5 results.",
+      "format": "{\"tool\": \"memory_search.search_short\", \"args\": [\"what we just discussed\"]}"
+    },
+    {
+      "command": "search_medium",
+      "args": ["query: str", "date: Optional[str]"],
+      "description": "Search medium-term memory (earlier today). Returns top 5 results. Optional date filter (YYYY-MM-DD).",
+      "format": "{\"tool\": \"memory_search.search_medium\", \"args\": [\"favorite game\", \"2025-12-26\"]}"
+    },
+    {
+      "command": "search_long",
+      "args": ["query: str", "date: Optional[str]"],
+      "description": "Search long-term memory (past days summaries). Returns top 5 results. Optional date filter (YYYY-MM-DD).",
+      "format": "{\"tool\": \"memory_search.search_long\", \"args\": [\"VTubers\", \"2025-12-20\"]}"
+    },
+    {
+      "command": "search_base",
+      "args": ["query: str"],
+      "description": "Search base knowledge (personality and documents). Returns top 5 results.",
+      "format": "{\"tool\": \"memory_search.search_base\", \"args\": [\"personality traits\"]}"
+    }
+  ],
+  "tool_usage_examples": [
+    "{\"tool\": \"memory_search.search\", \"args\": [\"minecraft\"]}",
+    "{\"tool\": \"memory_search.search_medium\", \"args\": [\"favorite game\"]}",
+    "{\"tool\": \"memory_search.search_long\", \"args\": [\"VTubers\", \"2025-12-20\"]}",
+    "{\"tool\": \"memory_search.search_base\", \"args\": [\"humor style\"]}",
+    "{\"tool\": \"memory_search.search\", \"args\": [\"music preferences\", \"2025-12-25\"]}"
+  ],
+  "tool_usage_guidance": [
+    "Use specific search terms like 'minecraft', 'favorite game', 'VTubers' instead of general terms like 'gaming topics' or 'anime discussions'",
+    "All search commands return exactly 5 most relevant results (not configurable)",
+    "search_short: For very recent context (last few messages) - no date filtering",
+    "search_medium: For earlier today's conversations - optional date filter",
+    "search_long: For conversations from previous days - optional date filter",
+    "search_base: For personality traits, examples, or reference documents - no date filtering",
+    "General 'search' command automatically searches all relevant tiers with optional date filter",
+    "Date format: YYYY-MM-DD (e.g., '2025-12-26')",
+    "Date filtering only works for medium and long memory tiers"
+  ],
+  "proactive_triggers": [
+    "When user says 'remember', 'recall', 'you said', 'we talked about'",
+    "When user asks 'what did I tell you about X' (use specific term X)",
+    "When user references 'yesterday', 'last time', 'before', 'earlier' with specific topics",
+    "When you're uncertain about past context that might be relevant to a specific topic",
+    "When user asks about specific topics you might have discussed previously (e.g., 'my favorite game', 'that VTuber I mentioned')"
+  ],
+  "cooldown_seconds": 2,
+  "timeout_seconds": 15,
+  "retry_on_failure": false,
+  "max_retries": 0,
+  "metadata": {
+    "category": "Memory & Recall",
+    "display_name": "Memory Search",
+    "gui_label": "Memory",
+    "gui_icon": "",
+    "version": "2.0.0",
+    "requires_api": false,
+    "dependencies": ["requests", "numpy"],
+    "notes": "Integrates with the four-tier memory system. Returns exactly 5 results per query. Supports optional date filtering for medium and long memory. Use specific search terms for best results."
+  }
+}

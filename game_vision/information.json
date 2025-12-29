@@ -1,0 +1,52 @@
+{
+  "tool_name": "game_vision",
+  "control_variable_name": "USE_GAME_VISION",
+  "control_variable_value": false,
+  "tool_description": "Continuous game screen monitoring with automated vision analysis every 10 seconds",
+  "priority": "HIGH",
+  "available_commands": [
+    {
+      "command": "get_status",
+      "args": [],
+      "description": "Get current monitoring status and statistics",
+      "format": "{\"tool\": \"game_vision.get_status\", \"args\": []}"
+    },
+    {
+      "command": "capture_now",
+      "args": [],
+      "description": "Force immediate screenshot capture and analysis",
+      "format": "{\"tool\": \"game_vision.capture_now\", \"args\": []}"
+    }
+  ],
+  "tool_usage_examples": [
+    "{\"tool\": \"game_vision.get_status\", \"args\": []}",
+    "{\"tool\": \"game_vision.capture_now\", \"args\": []}"
+  ],
+  "tool_usage_guidance": [
+    "Automatic monitoring mode - captures and analyzes screen every 10 seconds",
+    "No manual commands needed - game state injected automatically into context",
+    "Use get_status to check monitoring statistics",
+    "Use capture_now to force immediate analysis outside regular interval",
+    "HIGH priority updates ensure game context is always available",
+    "Analysis includes: game identification, player status, objectives, threats, UI elements",
+    "Works with any game - provides generic game state description",
+    "Requires Ollama running with vision model (llava:latest or similar)"
+  ],
+  "proactive_triggers": [
+    "Automatically every 10 seconds during active gameplay",
+    "Provides continuous awareness of game state",
+    "No specific triggers needed - always monitoring when enabled"
+  ],
+  "cooldown_seconds": 0,
+  "timeout_seconds": 30,
+  "retry_on_failure": false,
+  "max_retries": 0,
+  "metadata": {
+    "category": "Computer Vision",
+    "display_name": "Game Vision",
+    "version": "1.0.0",
+    "requires_api": false,
+    "dependencies": ["pyautogui", "screeninfo", "Pillow", "requests"],
+    "notes": "Continuous monitoring tool - captures primary monitor every 10 seconds. Requires Ollama with vision model. Analysis results automatically injected into thought buffer with HIGH priority."
+  }
+}

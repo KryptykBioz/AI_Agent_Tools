@@ -1,0 +1,99 @@
+{
+  "tool_name": "opencv_vision",
+  "control_variable_name": "USE_OPENCV_VISION",
+  "control_variable_value": false,
+  "tool_description": "High-performance continuous screen monitoring using OpenCV with configurable FPS and real-time analysis",
+  "priority": "HIGH",
+  "available_commands": [
+    {
+      "command": "get_status",
+      "args": [],
+      "description": "Get current monitoring status, FPS, and capture statistics",
+      "format": "{\"tool\": \"opencv_vision.get_status\", \"args\": []}"
+    },
+    {
+      "command": "capture_now",
+      "args": [],
+      "description": "Force immediate capture and analysis outside regular interval",
+      "format": "{\"tool\": \"opencv_vision.capture_now\", \"args\": []}"
+    },
+    {
+      "command": "set_fps",
+      "args": ["fps: int"],
+      "description": "Change capture frame rate (1-60 FPS)",
+      "format": "{\"tool\": \"opencv_vision.set_fps\", \"args\": [15]}"
+    },
+    {
+      "command": "set_interval",
+      "args": ["seconds: float"],
+      "description": "Change analysis interval in seconds (minimum 1.0)",
+      "format": "{\"tool\": \"opencv_vision.set_interval\", \"args\": [3.0]}"
+    }
+  ],
+  "tool_usage_examples": [
+    "{\"tool\": \"opencv_vision.get_status\", \"args\": []}",
+    "{\"tool\": \"opencv_vision.capture_now\", \"args\": []}",
+    "{\"tool\": \"opencv_vision.set_fps\", \"args\": [20]}",
+    "{\"tool\": \"opencv_vision.set_interval\", \"args\": [5.0]}"
+  ],
+  "tool_usage_guidance": [
+    "Automatic continuous monitoring - captures screen at target FPS",
+    "Analyzes frames at configurable intervals (default 5 seconds)",
+    "Screen descriptions automatically injected into thought buffer with HIGH priority",
+    "Change detection prevents redundant analysis of static screens",
+    "Non-blocking threaded capture - AI continues thinking while capturing",
+    "10-20x faster than PyAutoGUI (10-50ms vs 200ms per capture)",
+    "Perfect for VTuber streaming and real-time game awareness",
+    "Use get_status to monitor performance and statistics",
+    "Use capture_now to force immediate analysis for important moments",
+    "Adjust FPS based on CPU load (lower = less overhead)",
+    "Adjust interval based on how frequently you need updates"
+  ],
+  "proactive_triggers": [
+    "Automatically monitors screen every [interval] seconds",
+    "Triggers on significant screen changes (configurable threshold)",
+    "Continuous awareness without manual intervention",
+    "Perfect for gaming, streaming, and interactive scenarios"
+  ],
+  "cooldown_seconds": 0,
+  "timeout_seconds": 20,
+  "retry_on_failure": false,
+  "max_retries": 0,
+  "metadata": {
+    "category": "Computer Vision",
+    "display_name": "OpenCV Vision Monitor",
+    "version": "1.0.0",
+    "requires_api": false,
+    "dependencies": ["mss", "opencv-python", "numpy", "Pillow", "requests"],
+    "performance": {
+      "capture_speed": "10-50ms per frame",
+      "max_fps": "60+ FPS capable",
+      "recommended_fps": "10-20 FPS for balanced performance",
+      "cpu_overhead": "Low (5-10% typical)",
+      "memory_usage": "~50-100MB"
+    },
+    "configuration": {
+      "default_fps": 10,
+      "default_analysis_interval": 5.0,
+      "default_capture_width": 1024,
+      "default_capture_height": 768,
+      "default_change_threshold": 50000,
+      "configurable_in_config_py": [
+        "opencv_vision_fps",
+        "opencv_vision_interval",
+        "opencv_vision_width",
+        "opencv_vision_height",
+        "opencv_vision_change_threshold"
+      ]
+    },
+    "notes": [
+      "Requires Ollama running with vision model (llava:latest or similar)",
+      "Uses MSS for native OS screen capture (much faster than PyAutoGUI)",
+      "Non-blocking architecture - capture runs in background thread",
+      "Thought buffer integration via context_loop (BaseTool architecture)",
+      "Change detection reduces unnecessary API calls",
+      "Suitable for real-time VTuber and gaming applications",
+      "Can coexist with other vision tools (vision, game_vision)"
+    ]
+  }
+}

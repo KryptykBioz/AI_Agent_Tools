@@ -1,0 +1,137 @@
+{
+  "tool_name": "dice_roller",
+  "control_variable_name": "USE_DICE_ROLLER",
+  "control_variable_value": false,
+  "tool_description": "Comprehensive dice roller for tabletop RPGs supporting all standard dice types (d4, d6, d8, d10, d12, d20, d100) with modifiers, advantage/disadvantage, and roll statistics",
+  "priority": "MEDIUM",
+  "available_commands": [
+    {
+      "command": "roll",
+      "args": ["notation: str"],
+      "description": "Roll dice using standard notation (XdY+Z format)",
+      "format": "{\"tool\": \"dice_roller.roll\", \"args\": [\"3d6+5\"]}",
+      "arguments": [
+        {
+          "name": "notation",
+          "type": "string",
+          "required": true,
+          "description": "Dice notation in format XdY+Z where X=count (1-100), Y=sides (4/6/8/10/12/20/100), Z=modifier (optional, can be negative)"
+        }
+      ]
+    },
+    {
+      "command": "advantage",
+      "args": ["modifier: Optional[int]"],
+      "description": "Roll with advantage (2d20, keep highest)",
+      "format": "{\"tool\": \"dice_roller.advantage\", \"args\": [5]}",
+      "arguments": [
+        {
+          "name": "modifier",
+          "type": "integer",
+          "required": false,
+          "description": "Optional modifier to add to the result (can be negative)"
+        }
+      ]
+    },
+    {
+      "command": "disadvantage",
+      "args": ["modifier: Optional[int]"],
+      "description": "Roll with disadvantage (2d20, keep lowest)",
+      "format": "{\"tool\": \"dice_roller.disadvantage\", \"args\": [-2]}",
+      "arguments": [
+        {
+          "name": "modifier",
+          "type": "integer",
+          "required": false,
+          "description": "Optional modifier to add to the result (can be negative)"
+        }
+      ]
+    },
+    {
+      "command": "stats",
+      "args": ["notation: str"],
+      "description": "Calculate theoretical statistics for a dice roll",
+      "format": "{\"tool\": \"dice_roller.stats\", \"args\": [\"3d6\"]}",
+      "arguments": [
+        {
+          "name": "notation",
+          "type": "string",
+          "required": true,
+          "description": "Dice notation to analyze (e.g., '3d6+5')"
+        }
+      ]
+    },
+    {
+      "command": "history",
+      "args": ["count: Optional[int]"],
+      "description": "View recent roll history",
+      "format": "{\"tool\": \"dice_roller.history\", \"args\": [10]}",
+      "arguments": [
+        {
+          "name": "count",
+          "type": "integer",
+          "required": false,
+          "description": "Number of recent rolls to display (default: 10, max: 100)"
+        }
+      ]
+    },
+    {
+      "command": "clear_history",
+      "args": [],
+      "description": "Clear all roll history",
+      "format": "{\"tool\": \"dice_roller.clear_history\", \"args\": []}",
+      "arguments": []
+    }
+  ],
+  "tool_usage_guidance": [
+    "Standard notation: XdY+Z where X=dice count, Y=sides, Z=modifier (optional)",
+    "Supported dice: d4, d6, d8, d10, d12, d20, d100",
+    "Can roll 1-100 dice at once",
+    "Modifiers can be positive (+5) or negative (-2)",
+    "Advantage/Disadvantage: D&D 5e style (roll 2d20, keep best/worst)",
+    "Statistics command shows min, max, average, and probability distribution",
+    "History tracks last 100 rolls with full details",
+    "Examples: '3d6+5' (3 six-sided dice plus 5), '2d20' (2 twenty-sided dice), '1d100-10' (percentile minus 10)"
+  ],
+  "tool_usage_examples": [
+    "{\"tool\": \"dice_roller.roll\", \"args\": [\"1d20+5\"]}",
+    "{\"tool\": \"dice_roller.roll\", \"args\": [\"3d6\"]}",
+    "{\"tool\": \"dice_roller.roll\", \"args\": [\"4d8+3\"]}",
+    "{\"tool\": \"dice_roller.roll\", \"args\": [\"2d10-2\"]}",
+    "{\"tool\": \"dice_roller.roll\", \"args\": [\"1d100\"]}",
+    "{\"tool\": \"dice_roller.advantage\", \"args\": [5]}",
+    "{\"tool\": \"dice_roller.advantage\", \"args\": []}",
+    "{\"tool\": \"dice_roller.disadvantage\", \"args\": [-2]}",
+    "{\"tool\": \"dice_roller.disadvantage\", \"args\": []}",
+    "{\"tool\": \"dice_roller.stats\", \"args\": [\"3d6+5\"]}",
+    "{\"tool\": \"dice_roller.stats\", \"args\": [\"2d20\"]}",
+    "{\"tool\": \"dice_roller.history\", \"args\": [20]}",
+    "{\"tool\": \"dice_roller.history\", \"args\": []}",
+    "{\"tool\": \"dice_roller.clear_history\", \"args\": []}"
+  ],
+  "proactive_triggers": [
+    "When user asks to roll dice or make a roll",
+    "When user mentions D&D, Pathfinder, or other tabletop RPGs",
+    "When user says 'roll for [skill/attribute/action]'",
+    "When user asks about attack rolls, saving throws, ability checks",
+    "When user mentions advantage or disadvantage",
+    "When user needs to generate random numbers for gaming",
+    "When discussing character stats or damage calculations",
+    "When user asks 'what would I roll for [action]'",
+    "When setting up combat or skill challenges"
+  ],
+  "cooldown_seconds": 0,
+  "timeout_seconds": 5,
+  "retry_on_failure": false,
+  "max_retries": 0,
+  "metadata": {
+    "category": "Gaming",
+    "display_name": "Dice Roller",
+    "gui_label": "Dice Roller",
+    "gui_icon": "",
+    "version": "1.0.0",
+    "requires_api": false,
+    "dependencies": [],
+    "notes": "Full-featured dice roller for tabletop RPGs. Supports all standard polyhedral dice (d4, d6, d8, d10, d12, d20, d100) with modifiers, advantage/disadvantage mechanics, roll history, and statistical analysis. Perfect for D&D, Pathfinder, and other tabletop games."
+  }
+}

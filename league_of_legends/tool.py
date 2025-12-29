@@ -154,9 +154,16 @@ class LeagueOfLegendsTool(BaseTool):
         self.threat_detector = LeagueThreatDetector()
         self.last_threat_analysis = {}
         self.last_event_count = 0
+        self.last_event_time = 0  # Track the actual event time, not just count
+        
+        # Connection state
+        self._connection_verified = False
+        self._last_health_percent = 100
+        self._last_context_time = 0
         
         # Check initial connection
         connected = self._check_api_available()
+        self._connection_verified = connected
         
         if self._logger:
             if connected:
@@ -175,6 +182,7 @@ class LeagueOfLegendsTool(BaseTool):
         """Cleanup League interface resources"""
         self.cached_data = None
         self.last_threat_analysis = {}
+        self._connection_verified = False
         
         if self._logger:
             self._logger.system("[League] Cleanup complete")
@@ -186,7 +194,15 @@ class LeagueOfLegendsTool(BaseTool):
         Returns:
             True if API is responding
         """
-        return self._check_api_available()
+        # Use cached connection state if recently checked
+        current_time = time.time()
+        if self._connection_verified and (current_time - self._last_context_time) < 5.0:
+            return True
+        
+        # Re-verify connection
+        available = self._check_api_available()
+        self._connection_verified = available
+        return available
     
     def _check_api_available(self) -> bool:
         """Check if League Live Client API is accessible"""
@@ -232,64 +248,151 @@ class LeagueOfLegendsTool(BaseTool):
             thought_buffer: ThoughtBuffer instance for injecting game state
         """
         if self._logger:
-            self._logger.system("[League] Context loop started")
+            self._logger.system("[League] Context loop started (2s interval)")
+        
+        # IMMEDIATE FIRST INJECTION - Don't wait for first loop iteration
+        try:
+            if self.is_available():
+                game_data = self._get_all_game_data(force_refresh=True)
+                if game_data:
+                    analysis = self.threat_detector.analyze_game_state(game_data)
+                    self.last_threat_analysis = analysis
+                    context = self._format_game_context(game_data, analysis)
+                    
+                    # CRITICAL FIX: Inject as RAW DATA to trigger reactive processing
+                    thought_buffer.ingest_raw_data(
+                        source='league_match',
+                        data=context
+                    )
+                    
+                    if self._logger:
+                        self._logger.tool("[League] ✓ Initial game state injected as raw data")
+        except Exception as e:
+            if self._logger:
+                self._logger.error(f"[League] Initial injection failed: {e}")
         
         while self._running:
             try:
+                # Check if API is available (consistent with Minecraft pattern)
                 if not self.is_available():
-                    # Wait longer if API not available
+                    if self._logger:
+                        self._logger.tool("[League] API not available, waiting 5s...")
                     await asyncio.sleep(5.0)
                     continue
                 
-                # Get current game state
-                game_data = self._get_all_game_data()
+                # Get current game state (force fresh data, bypass cache)
+                game_data = self._get_all_game_data(force_refresh=True)
                 
                 if game_data:
+                    # Debug: Log what data we received
+                    if self._logger:
+                        active_player = game_data.get('activePlayer', {})
+                        stats = active_player.get('championStats', {})
+                        hp = stats.get('currentHealth', 0)
+                        max_hp = stats.get('maxHealth', 1)
+                        
+                        self._logger.tool(
+                            f"[League] Game data received - HP: {hp}/{max_hp}, "
+                            f"Stats keys: {list(stats.keys())[:5]}"
+                        )
+                    
                     # Analyze for threats and critical events
                     analysis = self.threat_detector.analyze_game_state(game_data)
                     self.last_threat_analysis = analysis
                     
-                    # Check for new events
+                    # Check for new events (check both count AND time to avoid duplicates)
                     events = game_data.get('events', {}).get('Events', [])
                     current_event_count = len(events)
-                    has_new_event = current_event_count > self.last_event_count
+                    
+                    # Get the latest event time if events exist
+                    latest_event_time = 0
+                    if events:
+                        latest_event_time = events[-1].get('EventTime', 0)
+                    
+                    # Only consider it a "new" event if BOTH count increased AND time is different
+                    has_new_event = (
+                        current_event_count > self.last_event_count and 
+                        latest_event_time > self.last_event_time
+                    )
+                    
+                    # Update trackers
                     self.last_event_count = current_event_count
+                    self.last_event_time = latest_event_time
                     
                     # Determine if we should inject context
                     should_inject = False
-                    urgency = 5
+                    # priority = self._calculate_priority(analysis, has_new_event)
                     
-                    # Critical health/mana
-                    if analysis['threat_level'] >= 7:
-                        should_inject = True
-                        urgency = analysis['threat_level']
+                    # Only inject on:
+                    # 1. New critical events (has_new_event is True)
+                    # 2. Critical threat level changes (not just sustained critical)
+                    # 3. Periodic updates every 10 seconds for sustained critical situations
                     
-                    # Critical events
-                    elif has_new_event and analysis.get('has_critical_event'):
+                    time_since_last_inject = time.time() - self._last_context_time
+                    
+                    # New critical event - always inject
+                    if has_new_event and analysis.get('has_critical_event'):
                         should_inject = True
-                        urgency = 8
+                    
+                    # Critical health/mana - inject first time or every 10 seconds
+                    elif analysis['threat_level'] >= 7:
+                        if time_since_last_inject >= 10.0 or self._last_context_time == 0:
+                            should_inject = True
+                    
+                    # Health just dropped to critical - inject immediately
+                    elif analysis.get('health_percent') and analysis['health_percent'] < 30:
+                        if self._last_health_percent >= 30:  # Was not critical before
+                            should_inject = True
                     
                     # Inject context if needed
                     if should_inject:
                         context = self._format_game_context(game_data, analysis)
                         
-                        thought_buffer.add_processed_thought(
-                            content=context,
+                        if self._logger:
+                            # Log BEFORE injection to verify content
+                            self._logger.tool(f"[League] === INJECTING RAW DATA ===")
+                            self._logger.tool(f"[League] Context length: {len(context)} chars")
+                            self._logger.tool(f"[League] Context preview (first 300 chars):")
+                            self._logger.tool(context[:300] + "...")
+                        
+                        # CRITICAL FIX: Inject as RAW DATA to trigger reactive processing
+                        # This ensures the agent actively thinks about the game state
+                        thought_buffer.ingest_raw_data(
                             source='league_match',
-                            urgency_override=urgency
+                            data=context
                         )
                         
                         if self._logger:
                             threats = ', '.join(analysis['threats']) if analysis['threats'] else 'general update'
+                            
+                            # Extract key stats for logging
+                            active_player = game_data.get('activePlayer', {})
+                            stats = active_player.get('championStats', {})
+                            hp = stats.get('currentHealth', 0)
+                            max_hp = stats.get('maxHealth', 1)
+                            hp_pct = (hp / max_hp * 100) if max_hp > 0 else 0
+                            
                             self._logger.tool(
-                                f"[League] Injected game state (urgency: {urgency}, {threats})"
+                                f"[League] ✓ Raw data injected - will trigger reactive processing"
                             )
+                            self._logger.tool(
+                                f"[League] Stats: Threat={analysis['threat_level']}/10, HP={hp_pct:.0f}%, {threats}"
+                            )
+                        
+                        # Track changes for future comparison
+                        self._last_health_percent = analysis.get('health_percent', 100)
+                        self._last_context_time = time.time()
+                else:
+                    if self._logger:
+                        self._logger.tool("[League] No game data available")
                 
                 # Check every 2 seconds for responsive updates
                 await asyncio.sleep(2.0)
                 
             except asyncio.CancelledError:
                 # Normal cancellation when tool stops
+                if self._logger:
+                    self._logger.system("[League] Context loop cancelled (tool disabled)")
                 break
             except Exception as e:
                 if self._logger:
@@ -319,7 +422,7 @@ class LeagueOfLegendsTool(BaseTool):
         
         # League doesn't support commands (spectator mode only)
         if command == 'get_context' or command == '':
-            game_data = self._get_all_game_data()
+            game_data = self._get_all_game_data(force_refresh=True)
             
             if game_data:
                 analysis = self.threat_detector.analyze_game_state(game_data)
@@ -346,12 +449,20 @@ class LeagueOfLegendsTool(BaseTool):
             guidance='League only supports passive data observation'
         )
     
-    def _get_all_game_data(self) -> Optional[Dict[str, Any]]:
-        """Retrieve complete game data from Live Client API with caching"""
+    def _get_all_game_data(self, force_refresh: bool = False) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve complete game data from Live Client API with caching
+        
+        Args:
+            force_refresh: If True, bypass cache and fetch fresh data
+            
+        Returns:
+            Game data dictionary or None if unavailable
+        """
         current_time = time.time()
         
-        # Use cache if fresh
-        if self.cached_data and (current_time - self.cache_timestamp) < self.cache_duration:
+        # Use cache if fresh and not forcing refresh
+        if not force_refresh and self.cached_data and (current_time - self.cache_timestamp) < self.cache_duration:
             return self.cached_data
         
         try:

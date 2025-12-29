@@ -1,7 +1,7 @@
 {
   "tool_name": "twitch_chat",
   "control_variable_name": "IN_TWITCH_CHAT",
-  "control_variable_value": true,
+  "control_variable_value": false,
   "tool_description": "Monitor and send messages to Twitch live chat via IRC with batch processing",
   "priority": "MEDIUM",
   "available_commands": [

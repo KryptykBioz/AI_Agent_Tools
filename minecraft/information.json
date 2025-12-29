@@ -1,10 +1,28 @@
 {
   "tool_name": "minecraft",
   "control_variable_name": "PLAYING_MINECRAFT",
-  "control_variable_value": true,
-  "tool_description": "Minecraft bot control with full command execution, vision, and situational awareness",
+  "control_variable_value": false,
+  "tool_description": "Minecraft bot control with hybrid context model: minimal background awareness + critical alerts + detailed state on demand",
   "priority": "HIGH",
   "available_commands": [
+    {
+      "command": "get_full_status",
+      "args": [],
+      "description": "Get complete detailed game state (health, position, all entities with coordinates, all visible blocks, complete inventory)",
+      "format": "{\"tool\": \"minecraft.get_full_status\", \"args\": []}"
+    },
+    {
+      "command": "get_inventory",
+      "args": [],
+      "description": "Get detailed inventory breakdown with item counts and durability",
+      "format": "{\"tool\": \"minecraft.get_inventory\", \"args\": []}"
+    },
+    {
+      "command": "get_nearby_blocks",
+      "args": ["max_distance: Optional[float]"],
+      "description": "Get list of nearby blocks with coordinates (default: 10m radius)",
+      "format": "{\"tool\": \"minecraft.get_nearby_blocks\", \"args\": [distance]}"
+    },
     {
       "command": "gather_resource",
       "args": ["resource: str", "count: Optional[int]"],
@@ -67,36 +85,68 @@
     }
   ],
   "tool_usage_examples": [
+    "{\"tool\": \"minecraft.get_full_status\", \"args\": []}",
+    "{\"tool\": \"minecraft.get_inventory\", \"args\": []}",
+    "{\"tool\": \"minecraft.get_nearby_blocks\", \"args\": [15]}",
     "{\"tool\": \"minecraft.gather_resource\", \"args\": [\"oak_log\", 5]}",
     "{\"tool\": \"minecraft.goto_location\", \"args\": [100, 64, 200]}",
     "{\"tool\": \"minecraft.move_direction\", \"args\": [\"forward\", 10]}",
     "{\"tool\": \"minecraft.attack_entity\", \"args\": [\"zombie\"]}",
     "{\"tool\": \"minecraft.stop_movement\", \"args\": []}",
-    "{\"tool\": \"minecraft.follow\", \"args\": [\"player\"]}",
     "{\"tool\": \"minecraft.craft_item\", \"args\": [\"crafting_table\", 1]}",
-    "{\"tool\": \"minecraft.use_item\", \"args\": [\"bread\"]}",
-    "{\"tool\": \"minecraft.chat\", \"args\": [\"Hello!\"]}",
-    "{\"tool\": \"minecraft.build\", \"args\": [\"wall\", 5]}"
-
+    "{\"tool\": \"minecraft.chat\", \"args\": [\"Hello!\"]}"
   ],
   "tool_usage_guidance": [
-    "Monitor bot health, food, position, and inventory status",
-    "Track ALL nearby entities with exact coordinates and threat levels",
-    "View ALL visible blocks with coordinates for navigation",
-    "React to hostile mobs based on threat analysis (1-10 scale)",
-    "Gather resources, navigate to locations, and manage survival needs",
-    "Use exact coordinates from vision data for precise navigation",
-    "Assess environmental conditions (time, weather, biome)"
+    "HYBRID CONTEXT MODEL - You receive game awareness in three ways:",
+    "",
+    "1. BACKGROUND SUMMARIES (automatic, every 10s):",
+    "   - One-line status: HP, Food, Position, Threat count, Time",
+    "   - Example: '[Minecraft] HP: 15/20 | Food: 10/20 | Pos: (123,64,456) | Threats: 2 | Time: Night'",
+    "   - Low overhead, maintains basic awareness",
+    "",
+    "2. CRITICAL ALERTS (automatic, immediate):",
+    "   - Health drops below 8 HP (critical danger)",
+    "   - Health drops 5+ points suddenly (under attack)",
+    "   - New hostile mob within 5 meters",
+    "   - Food at 0 (starving)",
+    "   - Valuable resources discovered (diamond/emerald ore)",
+    "   - These provide detailed context with coordinates when urgent",
+    "",
+    "3. DETAILED PULLS (on your explicit request):",
+    "   - Use minecraft.get_full_status for complete game state",
+    "   - Use minecraft.get_inventory for detailed item breakdown",
+    "   - Use minecraft.get_nearby_blocks for block coordinates",
+    "   - Only call these when you need precise information for planning",
+    "",
+    "WHEN TO USE DETAILED PULLS:",
+    "   - Planning navigation: get_full_status for entity/block coordinates",
+    "   - Resource management: get_inventory to check what you have",
+    "   - Building/crafting: get_nearby_blocks to find materials",
+    "   - Combat strategy: get_full_status for enemy positions and threat levels",
+    "",
+    "RESPONSE STRATEGY:",
+    "   - Background summaries keep you aware passively",
+    "   - Critical alerts demand immediate response (flee, fight, eat)",
+    "   - Use detailed pulls before complex actions (navigation, building)",
+    "   - Don't spam detailed pulls - trust the background summaries for routine awareness"
   ],
   "proactive_triggers": [
-    "When bot health drops below 10 (critical)",
-    "When food level is below 6 (hungry)",
-    "When hostile mobs with threat level 8+ are nearby",
-    "When it's nighttime and hostiles are present",
-    "When valuable resources (ores, wood) are visible within 8m",
-    "When position or inventory changes significantly",
-    "When environmental threats detected (lava, drowning)",
-    "React naturally to opportunities without over-optimization"
+    "CRITICAL ALERTS (automatic push):",
+    "  - Health < 8 HP (critical)",
+    "  - Health drops 5+ points suddenly",
+    "  - Hostile mob within 5 meters",
+    "  - Food at 0 (starving)",
+    "  - Valuable ore discovered nearby",
+    "",
+    "CONSIDER DETAILED PULL when:",
+    "  - Planning precise navigation (need coordinates)",
+    "  - Checking inventory before crafting",
+    "  - Assessing combat situation (threat levels)",
+    "  - Looking for specific blocks/resources",
+    "",
+    "DON'T over-pull:",
+    "  - Background summaries provide routine awareness",
+    "  - Only pull details when you need to act on them"
   ],
   "cooldown_seconds": 2,
   "timeout_seconds": 30,
@@ -107,9 +157,9 @@
     "display_name": "Minecraft Bot",
     "gui_label": "Minecraft",
     "gui_icon": "",
-    "version": "2.0.0",
+    "version": "3.0.0",
     "requires_api": true,
     "dependencies": ["requests"],
-    "notes": "Provides complete situational awareness with ALL coordinates, NO truncation. Blocks sampled by proximity for natural awareness."
+    "notes": "Hybrid model: minimal background (~100 chars/10s) + critical alerts (immediate) + detailed pulls (explicit). Scales to any game."
   }
 }

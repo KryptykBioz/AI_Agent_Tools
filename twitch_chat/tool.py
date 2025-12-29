@@ -451,6 +451,45 @@ class TwitchChatTool(BaseTool):
             self._logger.warning("[Twitch] No channel configured")
         
         return True
+    
+    def _reload_config(self):
+        """
+        Reload configuration from config.py
+        Allows channel changes without full tool restart
+        """
+        try:
+            import importlib
+            import sys
+            
+            config_module_name = 'BASE.tools.installed.twitch_chat.config'
+            
+            if config_module_name in sys.modules:
+                config = importlib.reload(sys.modules[config_module_name])
+            else:
+                config = importlib.import_module(config_module_name)
+            
+            old_channel = self.channel
+            
+            self.channel = getattr(config, 'TWITCH_CHANNEL', '')
+            self.oauth_token = getattr(config, 'TWITCH_OAUTH_TOKEN', '')
+            self.nickname = getattr(config, 'TWITCH_NICKNAME', '')
+            self.max_context_messages = getattr(config, 'TWITCH_MAX_CONTEXT', 10)
+            self.auto_start = getattr(config, 'TWITCH_AUTO_START', False)
+            self.batch_interval = getattr(config, 'TWITCH_BATCH_INTERVAL', 5.0)
+            self.enable_batching = getattr(config, 'TWITCH_ENABLE_BATCHING', True)
+            
+            if self._logger:
+                if old_channel != self.channel:
+                    self._logger.system(
+                        f"[Twitch] Channel changed: '{old_channel}' → '{self.channel}'"
+                    )
+                else:
+                    self._logger.system(f"[Twitch] Config reloaded (channel: {self.channel})")
+        
+        except Exception as e:
+            if self._logger:
+                self._logger.warning(f"[Twitch] Config reload failed: {e}")
+
         
     async def cleanup(self):
         """Cleanup Twitch resources"""
@@ -610,27 +649,42 @@ class TwitchChatTool(BaseTool):
     
     async def _handle_start(self) -> Dict[str, Any]:
         """Handle start command"""
+        # Check if already running
         if self.is_available():
             return self._success_result(
                 f'Already monitoring #{self.channel}',
                 metadata={'channel': self.channel}
             )
         
+        # Reload config to get latest channel/settings
+        self._reload_config()
+        
+        # Validate channel
+        if not self.channel:
+            return self._error_result(
+                'No channel configured',
+                guidance='Set TWITCH_CHANNEL in config.py or via GUI'
+            )
+        
+        # Start monitor
         success = self._start_monitor()
         
         if success:
             mode = "authenticated" if self.oauth_token else "read-only"
+            batch_status = f"batching ({self.batch_interval}s)" if self.enable_batching else "no batching"
             return self._success_result(
-                f'Started monitoring #{self.channel}',
+                f'Monitoring #{self.channel} ({mode}, {batch_status})',
                 metadata={
                     'channel': self.channel,
                     'mode': mode,
-                    'batching': self.enable_batching,
-                    'batch_interval': self.batch_interval
+                    'batching': self.enable_batching
                 }
             )
         else:
-            return self._error_result('Failed to start')
+            return self._error_result(
+                f'Failed to start monitoring #{self.channel}',
+                guidance='Check channel name and IRC connection'
+            )
     
     async def _handle_stop(self) -> Dict[str, Any]:
         """Handle stop command"""

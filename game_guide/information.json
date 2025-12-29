@@ -1,0 +1,71 @@
+{
+  "tool_name": "game_guide",
+  "control_variable_name": "USE_GAME_GUIDE",
+  "control_variable_value": false,
+  "tool_description": "Search embedded game guides for gameplay tips, strategies, walkthroughs, and game-specific information",
+  "priority": "MEDIUM",
+  "available_commands": [
+    {
+      "command": "search",
+      "args": ["query: str", "game_name: Optional[str]"],
+      "description": "Search all game guides for relevant information. Returns top 5 results. Optional game_name filter.",
+      "format": "{\"tool\": \"game_guide.search\", \"args\": [\"mining diamonds\"]}"
+    },
+    {
+      "command": "search_game",
+      "args": ["game_name: str", "query: str"],
+      "description": "Search a specific game's guide. Returns top 5 results.",
+      "format": "{\"tool\": \"game_guide.search_game\", \"args\": [\"minecraft\", \"crafting recipes\"]}"
+    },
+    {
+      "command": "list_games",
+      "args": [],
+      "description": "List all available game guides.",
+      "format": "{\"tool\": \"game_guide.list_games\", \"args\": []}"
+    },
+    {
+      "command": "get_sections",
+      "args": ["game_name: str"],
+      "description": "Get all section headings from a specific game guide.",
+      "format": "{\"tool\": \"game_guide.get_sections\", \"args\": [\"minecraft\"]}"
+    }
+  ],
+  "tool_usage_examples": [
+    "{\"tool\": \"game_guide.search\", \"args\": [\"how to build a farm\"]}",
+    "{\"tool\": \"game_guide.search_game\", \"args\": [\"minecraft\", \"enchanting\"]}",
+    "{\"tool\": \"game_guide.search\", \"args\": [\"boss fight strategies\", \"elden ring\"]}",
+    "{\"tool\": \"game_guide.list_games\", \"args\": []}",
+    "{\"tool\": \"game_guide.get_sections\", \"args\": [\"minecraft\"]}"
+  ],
+  "tool_usage_guidance": [
+    "Use specific search terms related to gameplay: 'crafting', 'boss fight', 'farming', 'building'",
+    "All search commands return exactly 5 most relevant results from the guides",
+    "search: General search across all game guides with optional game filter",
+    "search_game: Search within a specific game's guide (more precise results)",
+    "list_games: Use this first if you're unsure which games have guides",
+    "get_sections: See what topics are covered in a specific game's guide",
+    "Game names are case-insensitive (minecraft = Minecraft = MINECRAFT)",
+    "Searches work on both guide content and section headings"
+  ],
+  "proactive_triggers": [
+    "When user asks 'how do I' or 'how to' about game mechanics",
+    "When user mentions specific game titles and needs help",
+    "When user asks about crafting, building, strategies, or game progression",
+    "When user is stuck on a game section or boss fight",
+    "When user wants to know what content is available for a game"
+  ],
+  "cooldown_seconds": 2,
+  "timeout_seconds": 15,
+  "retry_on_failure": false,
+  "max_retries": 0,
+  "metadata": {
+    "category": "Game Information",
+    "display_name": "Game Guide",
+    "gui_label": "Game Guides",
+    "gui_icon": "",
+    "version": "1.0.0",
+    "requires_api": false,
+    "dependencies": ["requests", "numpy"],
+    "notes": "Searches embedded game guides stored separately from base knowledge. Returns exactly 5 results per query. Supports filtering by game name. Uses vector similarity search with keyword fallback."
+  }
+}

@@ -1,32 +1,131 @@
 /**
- * actions/utility.js - Utility and miscellaneous actions
+ * actions/utility.js - Enhanced utility actions with full crafting support
  */
 
 const { currentMcData } = require('../bot');
 
 /**
- * Get bot status
+ * Craft an item using recipe system
  */
-async function executeStatus(bot) {
-  const pos = bot.entity.position;
-  const health = bot.health;
-  const food = bot.food;
+async function executeCraft(bot, itemName, count = 1) {
+  console.log(`[Utility] Crafting ${count}x ${itemName}`);
   
-  return {
-    status: 'success',
-    action: 'status',
-    message: `Position: (${Math.round(pos.x)}, ${Math.round(pos.y)}, ${Math.round(pos.z)}), Health: ${health}/20, Food: ${food}/20`,
-    data: {
-      position: { x: pos.x, y: pos.y, z: pos.z },
-      health,
-      food,
-      gameMode: bot.game?.gameMode || 'unknown'
+  try {
+    const mcData = currentMcData(bot);
+    if (!mcData) {
+      return { status: 'error', message: 'Minecraft data not available' };
     }
-  };
+    
+    const item = mcData.itemsByName[itemName];
+    if (!item) {
+      return { status: 'error', message: `Unknown item: ${itemName}` };
+    }
+    
+    // Find recipe
+    const recipe = bot.recipesFor(item.id, null, 1, null)[0];
+    
+    if (!recipe) {
+      return {
+        status: 'error',
+        action: 'craft',
+        message: `No recipe found for ${itemName}`
+      };
+    }
+    
+    // Check if we need crafting table
+    const needsCraftingTable = recipe.requiresTable;
+    
+    if (needsCraftingTable) {
+      const craftingTable = bot.findBlock({
+        matching: mcData.blocksByName['crafting_table'].id,
+        maxDistance: 32
+      });
+      
+      if (!craftingTable) {
+        return {
+          status: 'error',
+          action: 'craft',
+          message: `${itemName} requires crafting table (not found nearby)`
+        };
+      }
+      
+      // Craft at table
+      await bot.craft(recipe, count, craftingTable);
+    } else {
+      // Craft in inventory
+      await bot.craft(recipe, count, null);
+    }
+    
+    return {
+      status: 'success',
+      action: 'craft',
+      message: `Crafted ${count}x ${itemName}`,
+      item: itemName,
+      count,
+      usedTable: needsCraftingTable
+    };
+    
+  } catch (err) {
+    return {
+      status: 'error',
+      action: 'craft',
+      message: `Failed to craft: ${err.message}`
+    };
+  }
 }
 
 /**
- * Equip an item from inventory
+ * Place crafting table
+ */
+async function executePlaceCraftingTable(bot) {
+  console.log(`[Utility] Placing crafting table`);
+  
+  try {
+    const mcData = currentMcData(bot);
+    if (!mcData) {
+      return { status: 'error', message: 'Minecraft data not available' };
+    }
+    
+    const craftingTable = mcData.itemsByName['crafting_table'];
+    if (!craftingTable) {
+      return { status: 'error', message: 'Crafting table not in game data' };
+    }
+    
+    const tableItem = bot.inventory.items().find(i => i.type === craftingTable.id);
+    
+    if (!tableItem) {
+      return { status: 'error', message: 'No crafting table in inventory' };
+    }
+    
+    // Find a place to put it
+    const pos = bot.entity.position.floored().offset(1, 0, 0);
+    const referenceBlock = bot.blockAt(pos.offset(0, -1, 0));
+    
+    if (!referenceBlock || referenceBlock.name === 'air') {
+      return { status: 'error', message: 'No solid block to place on' };
+    }
+    
+    await bot.equip(tableItem, 'hand');
+    await bot.placeBlock(referenceBlock, bot.vec3(0, 1, 0));
+    
+    return {
+      status: 'success',
+      action: 'place_crafting_table',
+      message: 'Placed crafting table',
+      position: { x: pos.x, y: pos.y, z: pos.z }
+    };
+    
+  } catch (err) {
+    return {
+      status: 'error',
+      action: 'place_crafting_table',
+      message: `Failed: ${err.message}`
+    };
+  }
+}
+
+/**
+ * Equip item with proper slot detection
  */
 async function executeEquip(bot, itemName) {
   console.log(`[Utility] Equipping ${itemName}`);
@@ -53,6 +152,7 @@ async function executeEquip(bot, itemName) {
     else if (itemName.includes('chestplate')) destination = 'torso';
     else if (itemName.includes('leggings')) destination = 'legs';
     else if (itemName.includes('boots')) destination = 'feet';
+    else if (itemName.includes('shield')) destination = 'off-hand';
     
     await bot.equip(inventoryItem, destination);
     
@@ -74,23 +174,35 @@ async function executeEquip(bot, itemName) {
 }
 
 /**
- * Craft an item
+ * Unequip item from slot
  */
-async function executeCraft(bot, itemName) {
-  console.log(`[Utility] Crafting ${itemName}`);
+async function executeUnequip(bot, slot = 'hand') {
+  console.log(`[Utility] Unequipping ${slot}`);
   
-  return {
-    status: 'error',
-    action: 'craft',
-    message: 'Crafting system not yet implemented'
-  };
+  try {
+    await bot.unequip(slot);
+    
+    return {
+      status: 'success',
+      action: 'unequip',
+      message: `Unequipped ${slot}`,
+      slot
+    };
+    
+  } catch (err) {
+    return {
+      status: 'error',
+      action: 'unequip',
+      message: `Failed to unequip: ${err.message}`
+    };
+  }
 }
 
 /**
- * Use/activate a block or item
+ * Drop item from inventory
  */
-async function executeUse(bot, targetName) {
-  console.log(`[Utility] Using ${targetName}`);
+async function executeDrop(bot, itemName, count = null) {
+  console.log(`[Utility] Dropping ${count || 'all'} ${itemName}`);
   
   try {
     const mcData = currentMcData(bot);
@@ -98,48 +210,210 @@ async function executeUse(bot, targetName) {
       return { status: 'error', message: 'Minecraft data not available' };
     }
     
-    // Try to find the block nearby
-    const block = mcData.blocksByName[targetName];
-    if (block) {
-      const targetBlock = bot.findBlock({
-        matching: block.id,
-        maxDistance: 5
-      });
-      
-      if (targetBlock) {
-        await bot.activateBlock(targetBlock);
-        return {
-          status: 'success',
-          action: 'use',
-          message: `Used ${targetName}`,
-          target: targetName
-        };
-      }
+    const item = mcData.itemsByName[itemName];
+    if (!item) {
+      return { status: 'error', message: `Unknown item: ${itemName}` };
     }
     
+    const inventoryItem = bot.inventory.items().find(i => i.type === item.id);
+    if (!inventoryItem) {
+      return { status: 'error', message: `No ${itemName} in inventory` };
+    }
+    
+    const dropCount = count === null ? inventoryItem.count : Math.min(count, inventoryItem.count);
+    
+    await bot.toss(item.id, null, dropCount);
+    
     return {
-      status: 'error',
-      action: 'use',
-      message: `Cannot find ${targetName} nearby`
+      status: 'success',
+      action: 'drop',
+      message: `Dropped ${dropCount}x ${itemName}`,
+      item: itemName,
+      count: dropCount
     };
     
   } catch (err) {
     return {
       status: 'error',
-      action: 'use',
-      message: `Failed to use: ${err.message}`
+      action: 'drop',
+      message: `Failed to drop: ${err.message}`
     };
   }
 }
 
 /**
- * Look at a target
+ * Eat food to restore health/hunger
  */
+async function executeEat(bot, foodName = null) {
+  console.log(`[Utility] Eating ${foodName || 'any food'}`);
+  
+  try {
+    const mcData = currentMcData(bot);
+    if (!mcData) {
+      return { status: 'error', message: 'Minecraft data not available' };
+    }
+    
+    let foodItem = null;
+    
+    if (foodName) {
+      const item = mcData.itemsByName[foodName];
+      if (!item) {
+        return { status: 'error', message: `Unknown food: ${foodName}` };
+      }
+      foodItem = bot.inventory.items().find(i => i.type === item.id);
+    } else {
+      // Find any food
+      const foods = [
+        'cooked_beef', 'cooked_porkchop', 'cooked_chicken', 'cooked_mutton',
+        'bread', 'apple', 'golden_apple', 'carrot', 'baked_potato',
+        'cooked_salmon', 'cooked_cod', 'cookie'
+      ];
+      
+      for (const food of foods) {
+        const item = mcData.itemsByName[food];
+        if (item) {
+          foodItem = bot.inventory.items().find(i => i.type === item.id);
+          if (foodItem) break;
+        }
+      }
+    }
+    
+    if (!foodItem) {
+      return { status: 'error', message: 'No food in inventory' };
+    }
+    
+    await bot.equip(foodItem, 'hand');
+    await bot.consume();
+    
+    return {
+      status: 'success',
+      action: 'eat',
+      message: `Ate ${foodItem.name}`,
+      food: foodItem.name
+    };
+    
+  } catch (err) {
+    return {
+      status: 'error',
+      action: 'eat',
+      message: `Failed to eat: ${err.message}`
+    };
+  }
+}
+
 /**
- * Look at a target
+ * Sleep in nearest bed
+ */
+async function executeSleep(bot) {
+  console.log(`[Utility] Sleeping`);
+  
+  try {
+    const mcData = currentMcData(bot);
+    if (!mcData) {
+      return { status: 'error', message: 'Minecraft data not available' };
+    }
+    
+    const bedTypes = ['red_bed', 'white_bed', 'black_bed', 'blue_bed', 'brown_bed',
+                      'cyan_bed', 'gray_bed', 'green_bed', 'light_blue_bed', 'light_gray_bed',
+                      'lime_bed', 'magenta_bed', 'orange_bed', 'pink_bed', 'purple_bed', 'yellow_bed'];
+    
+    let bed = null;
+    
+    for (const bedType of bedTypes) {
+      const bedBlock = mcData.blocksByName[bedType];
+      if (bedBlock) {
+        bed = bot.findBlock({
+          matching: bedBlock.id,
+          maxDistance: 32
+        });
+        if (bed) break;
+      }
+    }
+    
+    if (!bed) {
+      return { status: 'error', message: 'No bed found nearby' };
+    }
+    
+    try {
+      await bot.sleep(bed);
+      
+      return {
+        status: 'success',
+        action: 'sleep',
+        message: 'Sleeping in bed'
+      };
+    } catch (err) {
+      if (err.message.includes('cannot sleep')) {
+        return {
+          status: 'error',
+          action: 'sleep',
+          message: 'Cannot sleep (must be night or thundering)'
+        };
+      }
+      throw err;
+    }
+    
+  } catch (err) {
+    return {
+      status: 'error',
+      action: 'sleep',
+      message: `Failed to sleep: ${err.message}`
+    };
+  }
+}
+
+/**
+ * Wake up from bed
+ */
+async function executeWake(bot) {
+  console.log(`[Utility] Waking up`);
+  
+  try {
+    await bot.wake();
+    
+    return {
+      status: 'success',
+      action: 'wake',
+      message: 'Woke up from bed'
+    };
+    
+  } catch (err) {
+    return {
+      status: 'error',
+      action: 'wake',
+      message: `Failed to wake: ${err.message}`
+    };
+  }
+}
+
+/**
+ * Get bot status
+ */
+async function executeStatus(bot) {
+  const pos = bot.entity.position;
+  const health = bot.health;
+  const food = bot.food;
+  
+  return {
+    status: 'success',
+    action: 'status',
+    message: `Position: (${Math.round(pos.x)}, ${Math.round(pos.y)}, ${Math.round(pos.z)}), Health: ${health}/20, Food: ${food}/20`,
+    data: {
+      position: { x: pos.x, y: pos.y, z: pos.z },
+      health,
+      food,
+      gameMode: bot.game?.gameMode || 'unknown',
+      dimension: bot.game?.dimension || 'unknown',
+      experience: bot.experience || 0,
+      level: bot.experienceLevel || 0
+    }
+  };
+}
+
+/**
+ * Look at target
  */
 async function executeLook(bot, targetName) {
-  // Handle missing/undefined target - look at what bot is currently looking at
   if (!targetName || targetName === 'undefined' || targetName.trim() === '') {
     console.log(`[Utility] Looking at current view`);
     try {
@@ -172,7 +446,7 @@ async function executeLook(bot, targetName) {
   try {
     const targetLower = targetName.toLowerCase();
     
-    // Try to find player first
+    // Try to find player
     const player = bot.players[targetName];
     if (player && player.entity) {
       await bot.lookAt(player.entity.position.offset(0, player.entity.height, 0));
@@ -237,150 +511,15 @@ async function executeLook(bot, targetName) {
   }
 }
 
-/**
- * Drop an item from inventory
- */
-async function executeDrop(bot, itemName, count = null) {
-  console.log(`[Utility] Dropping ${count || 'all'} ${itemName}`);
-  
-  try {
-    const mcData = currentMcData(bot);
-    if (!mcData) {
-      return { status: 'error', message: 'Minecraft data not available' };
-    }
-    
-    const item = mcData.itemsByName[itemName];
-    if (!item) {
-      return { status: 'error', message: `Unknown item: ${itemName}` };
-    }
-    
-    const inventoryItem = bot.inventory.items().find(i => i.type === item.id);
-    if (!inventoryItem) {
-      return { status: 'error', message: `No ${itemName} in inventory` };
-    }
-    
-    const dropCount = count === null ? inventoryItem.count : Math.min(count, inventoryItem.count);
-    
-    await bot.toss(item.id, null, dropCount);
-    
-    return {
-      status: 'success',
-      action: 'drop',
-      message: `Dropped ${dropCount}x ${itemName}`,
-      item: itemName,
-      count: dropCount
-    };
-    
-  } catch (err) {
-    return {
-      status: 'error',
-      action: 'drop',
-      message: `Failed to drop: ${err.message}`
-    };
-  }
-}
-
-/**
- * Eat food from inventory
- */
-async function executeEat(bot, foodName = null) {
-  console.log(`[Utility] Eating ${foodName || 'any food'}`);
-  
-  try {
-    const mcData = currentMcData(bot);
-    if (!mcData) {
-      return { status: 'error', message: 'Minecraft data not available' };
-    }
-    
-    // If no specific food, find any edible item
-    let foodItem = null;
-    
-    if (foodName) {
-      const item = mcData.itemsByName[foodName];
-      if (!item) {
-        return { status: 'error', message: `Unknown food: ${foodName}` };
-      }
-      foodItem = bot.inventory.items().find(i => i.type === item.id);
-    } else {
-      // Find any food in inventory
-      const foods = ['cooked_beef', 'cooked_porkchop', 'bread', 'apple', 'cooked_chicken'];
-      for (const food of foods) {
-        const item = mcData.itemsByName[food];
-        if (item) {
-          foodItem = bot.inventory.items().find(i => i.type === item.id);
-          if (foodItem) break;
-        }
-      }
-    }
-    
-    if (!foodItem) {
-      return { status: 'error', message: 'No food in inventory' };
-    }
-    
-    await bot.equip(foodItem, 'hand');
-    await bot.consume();
-    
-    return {
-      status: 'success',
-      action: 'eat',
-      message: `Ate ${foodItem.name}`,
-      food: foodItem.name
-    };
-    
-  } catch (err) {
-    return {
-      status: 'error',
-      action: 'eat',
-      message: `Failed to eat: ${err.message}`
-    };
-  }
-}
-
-/**
- * Sleep in a bed
- */
-async function executeSleep(bot) {
-  console.log(`[Utility] Sleeping in bed`);
-  
-  try {
-    const bed = bot.findBlock({
-      matching: bot.registry.blocksByName.bed.id,
-      maxDistance: 32
-    });
-    
-    if (!bed) {
-      return {
-        status: 'error',
-        action: 'sleep',
-        message: `No bed found nearby`
-      };
-    }
-    
-    await bot.sleep(bed);
-    
-    return {
-      status: 'success',
-      action: 'sleep',
-      message: `Slept in bed`
-    };
-    
-  } catch (err) {
-    return {
-      status: 'error',
-      action: 'sleep',
-      message: `Failed to sleep: ${err.message}`
-    };
-  }
-}
-
-// CRITICAL: Export all functions!
 module.exports = {
   executeStatus,
   executeEquip,
+  executeUnequip,
   executeCraft,
-  executeUse,
-  executeLook,
+  executePlaceCraftingTable,
   executeDrop,
   executeEat,
-  executeSleep
+  executeSleep,
+  executeWake,
+  executeLook
 };

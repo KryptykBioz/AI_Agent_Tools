@@ -18,7 +18,7 @@ ENABLED = False
 
 # Twitch channel to monitor (without the # symbol)
 # Example: "shroud" for twitch.tv/shroud
-TWITCH_CHANNEL = "ironmouse"
+TWITCH_CHANNEL = "zonesama"
 
 # OAuth token for authenticated mode (required to send messages)
 # Get your token from: https://twitchapps.com/tmi/
