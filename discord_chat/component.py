@@ -13,6 +13,14 @@ class DiscordChatComponent:
     GUI component for Discord Chat tool
     Provides interface for monitoring and controlling Discord bot
     """
+
+    __slots__ = (
+    'parent_gui', 'ai_core', 'logger', 'discord_tool', 'panel_frame',
+    'status_label', 'token_var', 'prefix_var', 'auto_start_var',
+    'channels_var', 'guilds_var', 'respond_mentions_var',
+    'respond_replies_var', 'start_button', 'stop_button',
+    'stats_text', 'update_job'
+    )
     
     def __init__(self, parent_gui, ai_core, logger):
         """

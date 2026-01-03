@@ -184,7 +184,6 @@ class GameVisionTool(BaseTool):
                             thought_buffer.add_processed_thought(
                                 content=context,
                                 source='game_vision',
-                                priority_override="HIGH"
                             )
                             
                             if self._logger:

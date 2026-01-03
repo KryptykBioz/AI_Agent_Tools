@@ -26,6 +26,12 @@ WARNING = "#f59e0b"
 
 class TwitchIRC:
     """Optimized Twitch IRC handler"""
+
+    __slots__ = (
+        'channel', 'oauth', 'nick', 'sock', 'running', 'thread',
+        'msg_queue', 'status_queue'
+    )
+    
     def __init__(self, channel: str, oauth: str = "", nick: str = ""):
         self.channel = channel.lower().strip().lstrip('#')
         self.oauth = oauth
@@ -146,6 +152,14 @@ class TwitchIRC:
 
 class TwitchGUI:
     """High-performance dark-theme GUI"""
+
+    __slots__ = (
+        'root', 'irc', 'connected', 'msg_count', 'last_update',
+        'update_interval', 'user_colors', 'channel_entry', 'connect_btn',
+        'status_label', 'count_label', 'chat_text', 'msg_entry',
+        'send_btn', 'oauth_frame', 'oauth_entry', 'nick_entry'
+    )
+    
     def __init__(self):
         self.root = tk.Tk()
         self.root.title("Twitch Chat Monitor")

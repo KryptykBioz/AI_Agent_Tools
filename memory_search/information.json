@@ -8,44 +8,44 @@
     {
       "command": "search",
       "args": ["query: str", "date: Optional[str]"],
-      "description": "Search all memory tiers for relevant entries matching the query. Returns top 5 results.",
+      "description": "Search all memory tiers for relevant entries matching the query. Returns top result.",
       "format": "{\"tool\": \"memory_search.search\", \"args\": [\"minecraft\"]}"
     },
     {
       "command": "search_short",
       "args": ["query: str"],
-      "description": "Search only short-term memory (recent conversation). Returns top 5 results.",
+      "description": "Search only short-term memory (recent conversation). Returns top result.",
       "format": "{\"tool\": \"memory_search.search_short\", \"args\": [\"what we just discussed\"]}"
     },
     {
       "command": "search_medium",
       "args": ["query: str", "date: Optional[str]"],
-      "description": "Search medium-term memory (earlier today). Returns top 5 results. Optional date filter (YYYY-MM-DD).",
+      "description": "Search medium-term memory (earlier today). Returns top result. Optional date filter (YYYY-MM-DD).",
       "format": "{\"tool\": \"memory_search.search_medium\", \"args\": [\"favorite game\", \"2025-12-26\"]}"
     },
     {
       "command": "search_long",
       "args": ["query: str", "date: Optional[str]"],
-      "description": "Search long-term memory (past days summaries). Returns top 5 results. Optional date filter (YYYY-MM-DD).",
+      "description": "Search long-term memory (past days summaries). Returns top result. Optional date filter (YYYY-MM-DD).",
       "format": "{\"tool\": \"memory_search.search_long\", \"args\": [\"VTubers\", \"2025-12-20\"]}"
     },
     {
       "command": "search_base",
       "args": ["query: str"],
-      "description": "Search base knowledge (personality and documents). Returns top 5 results.",
+      "description": "Search base knowledge (personality and documents). Returns top result.",
       "format": "{\"tool\": \"memory_search.search_base\", \"args\": [\"personality traits\"]}"
     }
   ],
   "tool_usage_examples": [
     "{\"tool\": \"memory_search.search\", \"args\": [\"minecraft\"]}",
     "{\"tool\": \"memory_search.search_medium\", \"args\": [\"favorite game\"]}",
-    "{\"tool\": \"memory_search.search_long\", \"args\": [\"VTubers\", \"2025-12-20\"]}",
-    "{\"tool\": \"memory_search.search_base\", \"args\": [\"humor style\"]}",
-    "{\"tool\": \"memory_search.search\", \"args\": [\"music preferences\", \"2025-12-25\"]}"
+    "{\"tool\": \"memory_search.search_long\", \"args\": [\"VTuber\", \"2025-12-20\"]}",
+    "{\"tool\": \"memory_search.search_base\", \"args\": [\"watched anime\"]}",
+    "{\"tool\": \"memory_search.search\", \"args\": [\"played game\", \"2025-12-25\"]}"
   ],
   "tool_usage_guidance": [
     "Use specific search terms like 'minecraft', 'favorite game', 'VTubers' instead of general terms like 'gaming topics' or 'anime discussions'",
-    "All search commands return exactly 5 most relevant results (not configurable)",
+    "All search commands return exactly 1 most relevant result (not configurable)",
     "search_short: For very recent context (last few messages) - no date filtering",
     "search_medium: For earlier today's conversations - optional date filter",
     "search_long: For conversations from previous days - optional date filter",
@@ -73,6 +73,6 @@
     "version": "2.0.0",
     "requires_api": false,
     "dependencies": ["requests", "numpy"],
-    "notes": "Integrates with the four-tier memory system. Returns exactly 5 results per query. Supports optional date filtering for medium and long memory. Use specific search terms for best results."
+    "notes": "Integrates with the four-tier memory system. Returns exactly 1 result per query. Supports optional date filtering for medium and long memory. Use specific search terms for best results."
   }
 }

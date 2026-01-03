@@ -15,6 +15,8 @@ class RemindersTool(BaseTool):
     Time-based reminders with natural language parsing and proactive notifications
     Context loop checks every 30 minutes and notifies of due/upcoming reminders
     """
+
+    __slots__ = ('reminder_manager')
     
     @property
     def name(self) -> str:
@@ -152,7 +154,6 @@ class RemindersTool(BaseTool):
                     f"Was due: {overdue_str} ago at {reminder['scheduled_time']}"
                 ),
                 source='urgent_reminder',
-                urgency_override=urgency_level
             )
             
             # Mark as notified
@@ -178,7 +179,6 @@ class RemindersTool(BaseTool):
                         f"Scheduled for: {reminder['scheduled_time']}"
                     ),
                     source='reminder_upcoming',
-                    urgency_override="Medium"
                 )
             
             if self._logger:
@@ -202,7 +202,6 @@ class RemindersTool(BaseTool):
                         f"[INFO] Next upcoming reminders:\n" + "\n".join(reminder_lines)
                     ),
                     source='reminder_info',
-                    urgency_override="Low"
                 )
                 
                 if self._logger:

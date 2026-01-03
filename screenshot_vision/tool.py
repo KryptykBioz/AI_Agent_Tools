@@ -23,6 +23,8 @@ class ScreenshotVisionTool(BaseTool):
     Screenshot capture and vision analysis tool
     Captures screens and analyzes them using vision models
     """
+
+    __slots__ = ('vision_model', 'ollama_endpoint')
     
     @property
     def name(self) -> str:

@@ -372,10 +372,15 @@ class OpenCVVisionTool(BaseTool):
             # Prepare prompt for continuous monitoring
             prompt = (
                 "You are monitoring a screen for an AI agent. "
-                "Provide a BRIEF (1-2 sentence) description of what's currently visible. "
+                "Provide a description of what's currently visible on the screen. "
                 "Focus on: active application, main content, any user interactions, "
-                "and significant changes. Be concise."
+                "and significant changes. Be concise." \
+                "Keep the summary under 1000 characters."
             )
+            
+            # Add current context if available
+            if hasattr(self._config, 'current_context') and self._config.current_context:
+                prompt += f"\n\nCURRENT CONTEXT: {self._config.current_context}"
             
             # Call Ollama (non-blocking)
             import requests
@@ -400,11 +405,11 @@ class OpenCVVisionTool(BaseTool):
                 
                 if analysis:
                     # Format for thought buffer
-                    formatted = f"Screen: {analysis}"
+                    formatted = f"SCREEN VISION: {analysis}"
                     
                     if self._logger:
                         self._logger.success(
-                            f"[OpenCV Vision] Analysis: {analysis}..."
+                            f"[Vision] Analysis: {analysis}..."
                         )
                     
                     return formatted

@@ -127,7 +127,7 @@
     "category": "Game Integration",
     "display_name": "Minecraft Spectator",
     "gui_label": "Minecraft (Spectator)",
-    "gui_icon": "👁️",
+    "gui_icon": "",
     "version": "2.0.0",
     "requires_api": false,
     "requires_bot_server": false,

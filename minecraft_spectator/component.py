@@ -51,7 +51,7 @@ class MinecraftSpectatorComponent:
         # Main panel frame
         self.panel_frame = ttk.LabelFrame(
             parent_frame,
-            text="👁️ Minecraft Spectator v2.0 (Direct Connection)",
+            text="[EYE] Minecraft Spectator v2.0 (Direct Connection)",
             style="Dark.TLabelframe"
         )
         self.panel_frame.pack(fill=tk.BOTH, expand=True, pady=(5, 0))
@@ -155,7 +155,7 @@ class MinecraftSpectatorComponent:
         
         self.status_label = tk.Label(
             status_left,
-            text="⚫ Not Connected",
+            text="[OFFLINE] Not Connected",
             font=("Segoe UI", 9, "bold"),
             foreground=DarkTheme.FG_MUTED,
             background=DarkTheme.BG_DARKER,
@@ -180,7 +180,7 @@ class MinecraftSpectatorComponent:
         
         self.health_label = tk.Label(
             status_right,
-            text="❤ --/20",
+            text="[HP] --/20",
             font=("Consolas", 9),
             foreground=DarkTheme.FG_MUTED,
             background=DarkTheme.BG_DARKER
@@ -189,7 +189,7 @@ class MinecraftSpectatorComponent:
         
         self.food_label = tk.Label(
             status_right,
-            text="🍖 --/20",
+            text="[FOOD] --/20",
             font=("Consolas", 9),
             foreground=DarkTheme.FG_MUTED,
             background=DarkTheme.BG_DARKER
@@ -232,7 +232,7 @@ class MinecraftSpectatorComponent:
         # Threats
         threats_frame = ttk.LabelFrame(
             left_column,
-            text="⚠️ Nearby Threats",
+            text="[WARNING] Nearby Threats",
             style="Dark.TLabelframe"
         )
         threats_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
@@ -252,7 +252,7 @@ class MinecraftSpectatorComponent:
         # Blocks
         blocks_frame = ttk.LabelFrame(
             left_column,
-            text="🧱 Nearby Blocks",
+            text="[BLOCKS] Nearby Blocks",
             style="Dark.TLabelframe"
         )
         blocks_frame.pack(fill=tk.BOTH, expand=True)
@@ -275,7 +275,7 @@ class MinecraftSpectatorComponent:
         
         inventory_frame = ttk.LabelFrame(
             right_column,
-            text="🎒 Inventory",
+            text="[INVENTORY] Inventory",
             style="Dark.TLabelframe"
         )
         inventory_frame.pack(fill=tk.BOTH, expand=True)
@@ -296,7 +296,7 @@ class MinecraftSpectatorComponent:
         """Create activity log section"""
         log_frame = ttk.LabelFrame(
             self.panel_frame,
-            text="📋 Activity Log",
+            text="[LOG] Activity Log",
             style="Dark.TLabelframe"
         )
         log_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=(0, 5))
@@ -344,7 +344,7 @@ class MinecraftSpectatorComponent:
         self.connected = False
         
         self.status_label.config(
-            text="⚫ Not Connected",
+            text="[OFFLINE] Not Connected",
             foreground=DarkTheme.FG_MUTED
         )
         
@@ -352,8 +352,8 @@ class MinecraftSpectatorComponent:
             text="Configure above, then enable tool to connect"
         )
         
-        self.health_label.config(text="❤ --/20", foreground=DarkTheme.FG_MUTED)
-        self.food_label.config(text="🍖 --/20", foreground=DarkTheme.FG_MUTED)
+        self.health_label.config(text="[HP] --/20", foreground=DarkTheme.FG_MUTED)
+        self.food_label.config(text="[FOOD] --/20", foreground=DarkTheme.FG_MUTED)
         self.position_label.config(text="Position: --, --, --")
         self.time_label.config(text="Time: --")
         
@@ -368,7 +368,7 @@ class MinecraftSpectatorComponent:
             self._add_log("Connected to server", 'success')
         
         self.status_label.config(
-            text="🟢 Connected & Spectating",
+            text="[ONLINE] Connected & Spectating",
             foreground=DarkTheme.ACCENT_GREEN
         )
         
@@ -377,7 +377,7 @@ class MinecraftSpectatorComponent:
         self.connection_label.config(
             text=f"Connected to {host}:{port}"
         )
-    
+
     def _update_game_state(self):
         """Update displays from tool's game state"""
         if not self.spectator_tool:
@@ -395,11 +395,11 @@ class MinecraftSpectatorComponent:
         food_color = DarkTheme.ACCENT_RED if food < 6 else DarkTheme.ACCENT_GREEN
         
         self.health_label.config(
-            text=f"❤ {health:.1f}/20",
+            text=f"[HP] {health:.1f}/20",
             foreground=health_color
         )
         self.food_label.config(
-            text=f"🍖 {food}/20",
+            text=f"[FOOD] {food}/20",
             foreground=food_color
         )
         

@@ -12,6 +12,12 @@ from typing import Optional, Dict, Any
 
 class LeagueOfLegendsComponent:
     """GUI component for League of Legends spectator mode"""
+
+    __slots__ = (
+        'parent_gui', 'ai_core', 'logger', 'league_tool', 'panel_frame',
+        'status_label', 'game_time_label', 'champion_label', 'stats_text',
+        'events_text', 'threat_indicator', 'update_job', '_last_game_data'
+    )
     
     def __init__(self, parent_gui, ai_core, logger):
         self.parent_gui = parent_gui

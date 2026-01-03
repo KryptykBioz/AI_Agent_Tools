@@ -1,0 +1,33 @@
+{
+  "tool_name": "group_chat",
+  "control_variable_name": "IN_GROUP_CHAT",
+  "control_variable_value": false,
+  "tool_description": "Background service: Automatically shares spoken responses between agent instances",
+  "priority": "BACKGROUND",
+  "available_commands": [],
+  "tool_usage_examples": [
+    "This is a background service - no manual commands needed",
+    "Automatically broadcasts your spoken responses to other agents",
+    "Automatically receives other agents' responses in your thought buffer",
+    "Completely automatic - runs in background when enabled"
+  ],
+  "proactive_triggers": [
+    "BACKGROUND SERVICE - No manual triggering",
+    "Broadcasts happen automatically after response generation",
+    "Messages are automatically injected into thought buffer"
+  ],
+  "cooldown_seconds": 0,
+  "timeout_seconds": 5,
+  "retry_on_failure": false,
+  "max_retries": 0,
+  "metadata": {
+    "category": "Communication",
+    "display_name": "Group Chat",
+    "gui_label": "Group Chat",
+    "gui_icon": "👥",
+    "version": "1.0.0",
+    "requires_api": false,
+    "dependencies": [],
+    "notes": "Background service only. No manual tool calls. Automatically shares spoken responses between agents when enabled."
+  }
+}

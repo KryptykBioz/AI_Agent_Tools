@@ -22,6 +22,14 @@ class MinecraftTool(BaseTool):
     - Critical event alerts (immediate)
     - Detailed state on demand (explicit calls)
     """
+
+    __slots__ = (
+        'api_host', 'api_port', 'api_base', '_last_vision_data',
+        '_connection_verified', '_last_health', '_last_food',
+        '_last_hostile_count', '_known_hostile_types', '_last_context_time',
+        'CRITICAL_HEALTH_THRESHOLD', 'LOW_HEALTH_THRESHOLD',
+        'LOW_FOOD_THRESHOLD', 'HOSTILE_DISTANCE_ALERT', 'HEALTH_DROP_ALERT'
+    )
     
     @property
     def name(self) -> str:

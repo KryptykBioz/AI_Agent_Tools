@@ -16,6 +16,8 @@ class WikiSearchTool(BaseTool):
     Wikipedia search with position tracking for varied results
     Ensures repeated searches return different content sections
     """
+
+    __slots__ = ('max_results', 'headers')
     
     API_URL = "https://en.wikipedia.org/w/api.php"
     CHUNK_SIZE = 500

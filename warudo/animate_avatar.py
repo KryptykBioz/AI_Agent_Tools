@@ -15,17 +15,27 @@ from collections import deque
 from BASE.core.logger import Logger
 
 WEBSOCKET_AVAILABLE = True
+WEBSOCKET_ERROR = None
 try:
-    import websocket
-except Exception:
+    from websocket import WebSocketApp
+    import websocket as ws_module
+except ImportError as e:
     WEBSOCKET_AVAILABLE = False
+    WEBSOCKET_ERROR = f"websocket-client not installed: {e}"
+except AttributeError as e:
+    WEBSOCKET_AVAILABLE = False
+    WEBSOCKET_ERROR = f"Wrong websocket module installed. Uninstall 'websocket' and install 'websocket-client': {e}"
+except Exception as e:
+    WEBSOCKET_AVAILABLE = False
+    WEBSOCKET_ERROR = f"Failed to import websocket: {e}"
 
 
 class WarudoWebSocketController:
     """WebSocket controller with fixed race condition handling"""
 
-    def __init__(self, websocket_url: str = "ws://127.0.0.1:19190"):
+    def __init__(self, websocket_url: str = "ws://127.0.0.1:19190", agent_name: str = None):
         self.websocket_url = websocket_url
+        self.agent_name = (agent_name or "agent").lower()
         self.ws_app = None
         self.ws_thread = None
         self.ws_connected = False
@@ -42,13 +52,15 @@ class WarudoWebSocketController:
         
         self._last_error = None
         self._connection_start_time = None
-        self._connection_ready = False  # NEW: Additional ready flag
+        self._connection_ready = False
 
         self.available_emotions = ['happy', 'angry', 'sad', 'relaxed', 'surprised']
         self.available_animations = [
             'nod', 'laugh', 'shrug', 'upset', 'wave', 'cat', 'confused', 
             'shy', 'swing', 'stretch', 'yay', 'taunt', 'bow', 'scare', 'refuse', 'snap'
         ]
+        
+        self.logger.warudo(f"[Warudo] Controller initialized for agent: {self.agent_name}")
 
     def _on_message(self, ws, message):
         """Handle incoming WebSocket message"""
@@ -56,7 +68,17 @@ class WarudoWebSocketController:
 
     def _on_error(self, ws, error):
         """Handle WebSocket error"""
-        self.logger.warudo(f"WebSocket error: {error}")
+        error_msg = str(error)
+        error_type = type(error).__name__
+        
+        self.logger.error(
+            f"[Warudo] WebSocket error\n"
+            f"  Error: {error_msg}\n"
+            f"  Type: {error_type}\n"
+            f"  Agent: {self.agent_name}\n"
+            f"  URL: {self.websocket_url}"
+        )
+        
         self._last_error = error
         
         with self._connection_lock:
@@ -90,7 +112,7 @@ class WarudoWebSocketController:
         FIXED: Reliable event-based waiting with verification
         """
         if not WEBSOCKET_AVAILABLE:
-            self.logger.warning("websocket-client not available")
+            self.logger.error(f"[Warudo] WebSocket not available: {WEBSOCKET_ERROR}")
             return False
 
         # Check if already connected and verified
@@ -98,28 +120,23 @@ class WarudoWebSocketController:
             if self.ws_connected and self._connection_ready and self._connection_event.is_set():
                 if self._connection_start_time:
                     age = time.time() - self._connection_start_time
-                    if age < 300:  # Less than 5 minutes old
-                        # Verify connection is still alive by checking thread
+                    if age < 300:
                         if self.ws_thread and self.ws_thread.is_alive():
                             return True
                 
-                # Connection might be stale - reconnect
-                self.logger.warudo("Connection stale, reconnecting...")
-                self._cleanup_connection_unsafe()  # Already have lock
+                self.logger.warudo("[Warudo] Connection stale, reconnecting...")
+                self._cleanup_connection_unsafe()
 
         try:
-            # Clear event before starting new connection
             self._connection_event.clear()
-            
-            # Clean up any existing connection
             self._cleanup_connection()
             
-            # Reset ready flag
             with self._connection_lock:
                 self._connection_ready = False
             
-            # Create new WebSocket app
-            self.ws_app = websocket.WebSocketApp(
+            self.logger.warudo(f"[Warudo] Connecting to {self.websocket_url} for agent '{self.agent_name}'...")
+            
+            self.ws_app = WebSocketApp(
                 self.websocket_url,
                 on_open=self._on_open,
                 on_message=self._on_message,
@@ -127,45 +144,51 @@ class WarudoWebSocketController:
                 on_close=self._on_close
             )
 
-            # Start connection thread
             self.ws_thread = threading.Thread(
                 target=self._run_websocket,
                 daemon=True,
                 name="WarudoWebSocket"
             )
             self.ws_thread.start()
+            self.logger.warudo("[Warudo] Connection thread started, waiting for connection...")
 
-            # Wait for connection with timeout
             connected = self._connection_event.wait(timeout)
             
             if not connected:
-                self.logger.warning(
-                    f"[Warudo] Connection timeout after {timeout}s"
+                self.logger.error(
+                    f"[Warudo] Connection timeout after {timeout}s\n"
+                    f"  URL: {self.websocket_url}\n"
+                    f"  Agent: {self.agent_name}\n"
+                    f"  Last error: {self._last_error or 'None'}"
                 )
                 self._cleanup_connection()
                 return False
             
-            # CRITICAL: Additional verification after event fires
-            # Give a small grace period for connection to stabilize
             time.sleep(0.1)
             
             with self._connection_lock:
                 if not self.ws_connected or not self._connection_ready:
-                    self.logger.warning("[Warudo] Connection event fired but state not ready")
+                    self.logger.error(
+                        f"[Warudo] Connection event fired but state not ready\n"
+                        f"  ws_connected: {self.ws_connected}\n"
+                        f"  _connection_ready: {self._connection_ready}\n"
+                        f"  Last error: {self._last_error or 'None'}"
+                    )
                     self._cleanup_connection_unsafe()
                     return False
             
-            # Final verification: thread should be alive
             if not self.ws_thread or not self.ws_thread.is_alive():
-                self.logger.warning("[Warudo] Connection thread died unexpectedly")
+                self.logger.error("[Warudo] Connection thread died unexpectedly")
                 self._cleanup_connection()
                 return False
             
-            self.logger.warudo("[Warudo] Connection verified and ready")
+            self.logger.warudo(f"[Warudo] Connection verified and ready for agent '{self.agent_name}'")
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to start connection: {e}")
+            self.logger.error(f"[Warudo] Failed to start connection: {e}\n  Type: {type(e).__name__}")
+            import traceback
+            self.logger.error(f"[Warudo] Traceback:\n{traceback.format_exc()}")
             self._last_error = e
             self._cleanup_connection()
             return False
@@ -173,9 +196,19 @@ class WarudoWebSocketController:
     def _run_websocket(self):
         """Run WebSocket connection in thread"""
         try:
+            self.logger.warudo(f"[Warudo] WebSocket thread running for agent '{self.agent_name}'...")
             self.ws_app.run_forever()
+            self.logger.warudo(f"[Warudo] WebSocket thread exited normally for agent '{self.agent_name}'")
         except Exception as e:
-            self.logger.error(f"WebSocket thread error: {e}")
+            self.logger.error(
+                f"[Warudo] WebSocket thread error\n"
+                f"  Error: {e}\n"
+                f"  Type: {type(e).__name__}\n"
+                f"  Agent: {self.agent_name}"
+            )
+            import traceback
+            self.logger.error(f"[Warudo] Traceback:\n{traceback.format_exc()}")
+            
             with self._connection_lock:
                 self.ws_connected = False
                 self._connection_ready = False
@@ -278,11 +311,15 @@ class WarudoManager:
     """High-level manager with fixed connection handling"""
 
     def __init__(self, websocket_url: str = "ws://127.0.0.1:19190", 
-                 auto_connect: bool = True, timeout: float = 5.0):
+                agent_name: str = None,
+                auto_connect: bool = True, timeout: float = 5.0):
         self.enabled = True
         self.logger = Logger()
+        self.agent_name = (agent_name or "agent").lower()
         
-        self.controller = WarudoWebSocketController(websocket_url)
+        self.logger.warudo(f"[Warudo] Manager initializing for agent: {self.agent_name}")
+        
+        self.controller = WarudoWebSocketController(websocket_url, agent_name=self.agent_name)
         
         if auto_connect and WEBSOCKET_AVAILABLE:
             success = self.connect(timeout=timeout)
@@ -290,7 +327,7 @@ class WarudoManager:
                 self.logger.warning(
                     "[Warudo] Auto-connect failed - connection not ready"
                 )
-
+                
     def connect(self, timeout: float = 5.0) -> bool:
         """
         Connect to Warudo WebSocket
@@ -324,7 +361,7 @@ class WarudoManager:
             self.logger.warning(f"Unknown emotion: {emotion}")
             return False
         
-        command = {"action": "emotion", "data": emotion}
+        command = {"action": f"{self.agent_name}/emotion", "data": emotion}
         success = self.controller.send_websocket_command(command)
         
         if success:
@@ -351,7 +388,7 @@ class WarudoManager:
             self.logger.warning(f"Unknown animation: {animation}")
             return False
         
-        command = {"action": "animation", "data": animation}
+        command = {"action": f"{self.agent_name}/animation", "data": animation}
         success = self.controller.send_websocket_command(command)
         
         if success:
@@ -406,14 +443,16 @@ class WarudoManager:
 
 if __name__ == "__main__":
     if not WEBSOCKET_AVAILABLE:
-        print("websocket-client not available")
-        print("Install with: pip install websocket-client")
+        print(f"[Warning] WebSocket not available: {WEBSOCKET_ERROR}")
+        print("\nFix:")
+        print("  pip uninstall websocket")
+        print("  pip install websocket-client")
     else:
         print("Testing Warudo connection...")
-        wm = WarudoManager("ws://127.0.0.1:19190")
+        wm = WarudoManager("ws://127.0.0.1:19190", agent_name="test")
         
         if wm.controller.ws_connected and wm.controller._connection_ready:
-            print("✓ Connected successfully")
+            print("[Confirmed] Connected successfully")
             print("\nTest 1: Emotion")
             wm.send_emotion("happy")
             time.sleep(2)
@@ -427,9 +466,9 @@ if __name__ == "__main__":
             time.sleep(1)
             wm.send_emotion("relaxed")
             
-            print("\n✓ All tests completed")
+            print("\n[Confirmed] All tests completed")
         else:
-            print("✗ Failed to connect")
+            print("[Warning] Failed to connect")
             print("\nTroubleshooting:")
             print("1. Is Warudo running?")
             print("2. Is WebSocket server enabled in Warudo?")

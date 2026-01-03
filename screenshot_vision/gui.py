@@ -20,6 +20,13 @@ from BASE.handlers.base_tool import BaseConfig
 
 class VisionGUI:
     """Minimal dark-theme GUI for vision tool"""
+
+    __slots__ = (
+        'root', 'bg', 'fg', 'input_bg', 'button_bg', 'button_hover',
+        'success', 'error', 'tool', 'loop', 'running', 'status_lbl',
+        'query_var', 'query_entry', 'screenshot_btn', 'analyze_btn',
+        'clear_btn', 'output_txt', 'thread'
+    )
     
     def __init__(self):
         self.root = tk.Tk()

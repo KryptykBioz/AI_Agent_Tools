@@ -14,7 +14,7 @@ class MemorySearchTool(BaseTool):
     Memory search tool for retrieving past conversations and knowledge
     Integrates with the four-tier memory system
     
-    All searches return exactly 5 most relevant results
+    All searches return exactly 1 most relevant result
     Date filtering available for medium and long memory tiers
     """
     
@@ -205,7 +205,7 @@ class MemorySearchTool(BaseTool):
             if self._logger:
                 self._logger.system("[MemorySearch] Searching SHORT memory...")
             
-            short_results = self._search_short_memory_internal(query, k=5)
+            short_results = self._search_short_memory_internal(query, k=1)
             if self._logger:
                 self._logger.system(f"[MemorySearch] Short memory: {len(short_results)} results")
             
@@ -218,7 +218,7 @@ class MemorySearchTool(BaseTool):
                 self._logger.system("[MemorySearch] Searching MEDIUM memory...")
             
             try:
-                medium_results = self._search_medium_internal(query, k=5)
+                medium_results = self._search_medium_internal(query, k=1)
                 if self._logger:
                     self._logger.system(f"[MemorySearch] Medium memory raw results: {len(medium_results)}")
                 
@@ -245,7 +245,7 @@ class MemorySearchTool(BaseTool):
                 self._logger.system("[MemorySearch] Searching LONG memory...")
             
             try:
-                long_results = self._search_long_internal(query, k=5)
+                long_results = self._search_long_internal(query, k=1)
                 if self._logger:
                     self._logger.system(f"[MemorySearch] Long memory raw results: {len(long_results)}")
                 
@@ -272,7 +272,7 @@ class MemorySearchTool(BaseTool):
                 self._logger.system("[MemorySearch] Searching BASE knowledge...")
             
             try:
-                base_results = self._search_base_internal(query, k=5)
+                base_results = self._search_base_internal(query, k=1)
                 if self._logger:
                     self._logger.system(f"[MemorySearch] Base knowledge: {len(base_results)} results")
                 
@@ -333,7 +333,7 @@ class MemorySearchTool(BaseTool):
         query = str(args[0]).strip()
         
         try:
-            results = self._search_short_memory_internal(query, k=5)
+            results = self._search_short_memory_internal(query, k=1)
             
             if not results:
                 return self._error_result(
@@ -357,7 +357,7 @@ class MemorySearchTool(BaseTool):
                 self._logger.error(f"[MemorySearch] Short search error: {e}")
             return self._error_result(f'Short memory search error: {str(e)}')
     
-    def _search_short_memory_internal(self, query: str, k: int = 5) -> List[Dict[str, Any]]:
+    def _search_short_memory_internal(self, query: str, k: int = 1) -> List[Dict[str, Any]]:
         """Internal method: Search short-term memory using keyword matching"""
         if not self.memory_manager.short_memory:
             if self._logger:
@@ -415,7 +415,7 @@ class MemorySearchTool(BaseTool):
             )
         
         try:
-            results = self._search_medium_internal(query, k=5)
+            results = self._search_medium_internal(query, k=1)
             
             if date_filter and results:
                 results = self._filter_by_date(results, date_filter)
@@ -446,7 +446,7 @@ class MemorySearchTool(BaseTool):
                 traceback.print_exc()
             return self._error_result(f'Medium memory search error: {str(e)}')
     
-    def _search_medium_internal(self, query: str, k: int = 5) -> List[Dict]:
+    def _search_medium_internal(self, query: str, k: int = 1) -> List[Dict]:
         """Internal: Search medium memory with AUTOMATIC fallback"""
         # Try vector search first
         if self.memory_search and hasattr(self.memory_search, 'search_medium_memory'):
@@ -476,7 +476,7 @@ class MemorySearchTool(BaseTool):
         # AUTOMATIC FALLBACK: Keyword search
         return self._keyword_search_medium(query, k)
     
-    def _keyword_search_medium(self, query: str, k: int = 5) -> List[Dict]:
+    def _keyword_search_medium(self, query: str, k: int = 1) -> List[Dict]:
         """Fallback: Keyword-based search for medium memory"""
         if not hasattr(self.memory_manager, 'medium_memory'):
             if self._logger:
@@ -551,7 +551,7 @@ class MemorySearchTool(BaseTool):
             )
         
         try:
-            results = self._search_long_internal(query, k=5)
+            results = self._search_long_internal(query, k=1)
             
             if date_filter and results:
                 results = self._filter_by_date(results, date_filter)
@@ -582,7 +582,7 @@ class MemorySearchTool(BaseTool):
                 traceback.print_exc()
             return self._error_result(f'Long memory search error: {str(e)}')
     
-    def _search_long_internal(self, query: str, k: int = 5) -> List[Dict]:
+    def _search_long_internal(self, query: str, k: int = 1) -> List[Dict]:
         """Internal: Search long memory with AUTOMATIC fallback"""
         # Try vector search first
         if self.memory_search and hasattr(self.memory_search, 'search_long_memory'):
@@ -611,7 +611,7 @@ class MemorySearchTool(BaseTool):
         # AUTOMATIC FALLBACK: Keyword search
         return self._keyword_search_long(query, k)
     
-    def _keyword_search_long(self, query: str, k: int = 5) -> List[Dict]:
+    def _keyword_search_long(self, query: str, k: int = 1) -> List[Dict]:
         """Fallback: Keyword-based search for long memory"""
         if not hasattr(self.memory_manager, 'long_memory') or not self.memory_manager.long_memory:
             if self._logger:
@@ -664,7 +664,7 @@ class MemorySearchTool(BaseTool):
         query = str(args[0]).strip()
         
         try:
-            results = self._search_base_internal(query, k=5)
+            results = self._search_base_internal(query, k=1)
             
             if not results:
                 return self._error_result(
@@ -690,7 +690,7 @@ class MemorySearchTool(BaseTool):
                 traceback.print_exc()
             return self._error_result(f'Base knowledge search error: {str(e)}')
     
-    def _search_base_internal(self, query: str, k: int = 5) -> List[Dict]:
+    def _search_base_internal(self, query: str, k: int = 1) -> List[Dict]:
         """Internal: Search base knowledge"""
         if self.memory_search and hasattr(self.memory_search, 'search_base_knowledge'):
             try:

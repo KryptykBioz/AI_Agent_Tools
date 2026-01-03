@@ -20,6 +20,11 @@ class WarudoAnimationTool(BaseTool):
     - Auto-reconnect on execute if connection drops
     """
     
+    __slots__ = (
+        'manager', '_websocket_url', '_agent_name', 
+        '_connection_attempts', '_max_attempts'
+    )
+    
     @property
     def name(self) -> str:
         return "warudo"
@@ -31,44 +36,68 @@ class WarudoAnimationTool(BaseTool):
         FIXED: Actually establish connection during init
         Returns False if connection fails (tool will be disabled)
         """
-        # Get WebSocket URL from config
         websocket_url = getattr(
             self._config, 
             'warudo_websocket_url', 
             'ws://127.0.0.1:19190'
         )
         
+        agent_name = None
+        
+        if hasattr(self._config, 'agentname'):
+            agent_name = self._config.agentname
+        
+        if not agent_name:
+            try:
+                from personality.bot_info import agentname
+                agent_name = agentname
+            except:
+                pass
+        
+        if not agent_name:
+            try:
+                from BASE.personality.bot_info import agentname
+                agent_name = agentname
+            except:
+                pass
+        
+        if not agent_name:
+            agent_name = 'agent'
+        
         if self._logger:
-            self._logger.system(f"[Warudo] Initializing connection to {websocket_url}")
+            self._logger.system(f"[Warudo] Initializing for agent '{agent_name}' at {websocket_url}")
         
-        # Create WarudoManager with auto-connect ENABLED
-        self.manager = WarudoManager(
-            websocket_url=websocket_url,
-            auto_connect=True,  # ✅ FIXED: Connect immediately
-            timeout=3.0  # Increased timeout for reliability
-        )
+        try:
+            self.manager = WarudoManager(
+                websocket_url=websocket_url,
+                agent_name=agent_name,
+                auto_connect=True,
+                timeout=3.0
+            )
+        except Exception as e:
+            if self._logger:
+                self._logger.error(f"[Warudo] Failed to create manager: {e}")
+            return False
         
-        # Store connection parameters
         self._websocket_url = websocket_url
+        self._agent_name = agent_name
         self._connection_attempts = 0
         self._max_attempts = 3
         
-        # Check if connection succeeded
         if not self.manager.controller.ws_connected:
             if self._logger:
                 self._logger.warning(
                     "[Warudo] Initial connection failed. "
                     "Ensure Warudo is running with WebSocket enabled."
                 )
-            # Return False = tool will be disabled
             return False
         
-        # Connection successful
         if self._logger:
             emotions = len(self.manager.controller.available_emotions)
             animations = len(self.manager.controller.available_animations)
             self._logger.success(
                 f"[Warudo] Connected successfully!\n"
+                f"  Agent: {agent_name}\n"
                 f"  Available: {emotions} emotions, {animations} animations"
             )
         
@@ -82,11 +111,9 @@ class WarudoAnimationTool(BaseTool):
         Returns:
             True if connected, False otherwise
         """
-        # Fast path: already connected
         if self.manager.controller.ws_connected:
             return True
         
-        # Check if we've exceeded retry attempts
         if self._connection_attempts >= self._max_attempts:
             if self._logger:
                 self._logger.error(
@@ -94,7 +121,6 @@ class WarudoAnimationTool(BaseTool):
                 )
             return False
         
-        # Attempt reconnection
         self._connection_attempts += 1
         
         if self._logger:
@@ -103,16 +129,15 @@ class WarudoAnimationTool(BaseTool):
             )
         
         try:
-            # Run connection in executor to avoid blocking event loop
             loop = asyncio.get_event_loop()
             connected = await loop.run_in_executor(
                 None, 
                 self.manager.connect,
-                3.0  # timeout
+                3.0
             )
             
             if connected:
-                self._connection_attempts = 0  # Reset on success
+                self._connection_attempts = 0
                 if self._logger:
                     self._logger.success("[Warudo] Reconnected successfully")
                 return True
@@ -173,7 +198,6 @@ class WarudoAnimationTool(BaseTool):
         if self._logger:
             self._logger.tool(f"[Warudo] Command: '{command}', args: {args}")
         
-        # Ensure connection before executing
         connected = await self._ensure_connection()
         
         if not connected:
@@ -189,14 +213,12 @@ class WarudoAnimationTool(BaseTool):
                 )
             )
         
-        # Validate command
         if not command:
             return self._error_result(
                 'No command provided',
                 guidance='Use: warudo.emotion or warudo.animation'
             )
         
-        # Route to appropriate handler
         if command == 'emotion':
             return await self._handle_emotion(args)
         elif command == 'animation':
@@ -230,7 +252,6 @@ class WarudoAnimationTool(BaseTool):
         if self._logger:
             self._logger.tool(f"[Warudo] Setting emotion: {emotion}")
         
-        # Run in executor to avoid blocking
         loop = asyncio.get_event_loop()
         success = await loop.run_in_executor(
             None,
@@ -249,7 +270,6 @@ class WarudoAnimationTool(BaseTool):
             if self._logger:
                 self._logger.error(f"[Warudo] Failed to set emotion: {emotion}")
             
-            # Connection might have dropped - reset state
             self.manager.controller.ws_connected = False
             
             return self._error_result(
@@ -281,7 +301,6 @@ class WarudoAnimationTool(BaseTool):
         if self._logger:
             self._logger.tool(f"[Warudo] Playing animation: {animation}")
         
-        # Run in executor to avoid blocking
         loop = asyncio.get_event_loop()
         success = await loop.run_in_executor(
             None,
@@ -300,7 +319,6 @@ class WarudoAnimationTool(BaseTool):
             if self._logger:
                 self._logger.error(f"[Warudo] Failed to play animation: {animation}")
             
-            # Connection might have dropped - reset state
             self.manager.controller.ws_connected = False
             
             return self._error_result(

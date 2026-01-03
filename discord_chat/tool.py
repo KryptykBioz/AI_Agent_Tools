@@ -25,6 +25,14 @@ class DiscordChatTool(BaseTool):
     Discord chat tool for monitoring and sending messages
     Runs Discord bot with event handlers and command support
     """
+
+    __slots__ = (
+    'token', 'command_prefix', 'allowed_channels', 'allowed_guilds',
+    'max_message_length', 'auto_start', 'bot_running', 'bot',
+    'bot_thread', 'loop', '_message_callback', 'context_buffer',
+    'max_context_messages', 'last_channel_id', '_response_queue',
+    '_response_task', 'stats'
+    )
     
     @property
     def name(self) -> str:

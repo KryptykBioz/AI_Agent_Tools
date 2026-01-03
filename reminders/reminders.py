@@ -12,14 +12,14 @@ from dataclasses import dataclass, asdict
 import re
 
 
-@dataclass
+@dataclass(slots=True)
 class Reminder:
     """Individual reminder entry"""
     id: str
     description: str
-    trigger_time: float  # Unix timestamp
+    trigger_time: float
     created_at: float
-    notification_count: int = 0  # Track how many times notified
+    notification_count: int = 0
     last_notified: Optional[float] = None
     
     def to_dict(self) -> dict:
@@ -90,6 +90,7 @@ class ReminderManager:
     """
     Manages reminders with automatic notification tracking
     """
+    __slots__ = ('project_root', 'logger', 'storage_file', 'reminders')
     
     def __init__(self, project_root: Path, logger=None):
         self.project_root = project_root

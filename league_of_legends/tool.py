@@ -14,6 +14,8 @@ import requests
 
 class LeagueThreatDetector:
     """Analyzes League game state for critical events"""
+
+    __slots__ = ()
     
     CRITICAL_EVENTS = {
         'ChampionKill', 'DragonKill', 'BaronKill', 'HeraldKill', 
@@ -123,6 +125,13 @@ class LeagueOfLegendsTool(BaseTool):
     Proactively injects game state and critical events into thought buffer
     Spectator mode only - no command execution available
     """
+
+    __slots__ = (
+        'api_host', 'api_port', 'api_base', 'timeout', 'cached_data',
+        'cache_timestamp', 'cache_duration', 'threat_detector',
+        'last_threat_analysis', 'last_event_count', 'last_event_time',
+        '_connection_verified', '_last_health_percent', '_last_context_time'
+    )
     
     @property
     def name(self) -> str:

@@ -548,9 +548,9 @@ class GameGuideTool(BaseTool):
             # FIXED: Use minimal cleaning that preserves formatting
             formatted_text = self._preserve_formatting(text)
             
-            # Smart truncation at paragraph boundary
-            if len(formatted_text) > 800:
-                formatted_text = self._smart_truncate(formatted_text, 800)
+            # [Changed] Hard limit to 1000 characters instead of 800
+            if len(formatted_text) > 1000:
+                formatted_text = self._smart_truncate(formatted_text, 1000)
             
             lines.append(f"\n{formatted_text}")
             lines.append(f"\n(relevance: {similarity:.2f})\n")
